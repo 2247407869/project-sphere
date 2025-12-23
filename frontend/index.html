@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Project Sphere | Mobile Brain</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Outfit:wght@300;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0d0d12;
+            --card-bg: rgba(255, 255, 255, 0.05);
+            --accent-color: #6366f1;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --glass-border: rgba(255, 255, 255, 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 400px;
+            padding: 2rem;
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            animation: fadeIn 0.8s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        h1 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.8rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, #fff 0%, var(--accent-color) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        p.subtitle {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-bottom: 2rem;
+        }
+
+        .input-group {
+            margin-bottom: 1.5rem;
+        }
+
+        textarea {
+            width: 100%;
+            height: 120px;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 1rem;
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 1rem;
+            resize: none;
+            outline: none;
+            transition: border-color 0.3s ease;
+        }
+
+        textarea:focus {
+            border-color: var(--accent-color);
+        }
+
+        .source-input {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 0.8rem 1rem;
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+            outline: none;
+        }
+
+        button {
+            width: 100%;
+            padding: 1rem;
+            background: var(--accent-color);
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: filter 0.3s ease, transform 0.2s ease;
+            box-shadow: 0 10px 15px -3px rgba(99, 102, 241, 0.3);
+        }
+
+        button:active {
+            transform: scale(0.98);
+        }
+
+        button:hover {
+            filter: brightness(1.1);
+        }
+
+        .result {
+            margin-top: 2rem;
+            padding: 1rem;
+            background: rgba(0, 0, 0, 0.15);
+            border-radius: 12px;
+            font-size: 0.85rem;
+            display: none;
+            animation: slideUp 0.4s ease-out;
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .result-item {
+            margin-bottom: 0.5rem;
+        }
+
+        .label {
+            color: var(--text-secondary);
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            display: block;
+        }
+
+        .loading {
+            display: none;
+            margin-top: 1rem;
+            text-align: center;
+            font-size: 0.8rem;
+            color: var(--accent-color);
+        }
+
+        /* Micro-animations */
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(99, 102, 241, 0.3);
+            border-top-color: var(--accent-color);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            vertical-align: middle;
+            margin-right: 8px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Project Sphere</h1>
+        <p class="subtitle">The Mobile Brain Integration</p>
+        
+        <div class="input-group">
+            <textarea id="content" placeholder="Capture the flash of insight..."></textarea>
+            <input type="text" id="source" class="source-input" value="mobile" placeholder="Source (e.g., mobile, web)">
+        </div>
+
+        <button onclick="capture()">Capture Insight</button>
+
+        <div id="loading" class="loading">
+            <div class="spinner"></div> Processing...
+        </div>
+
+        <div id="result" class="result">
+            <div class="result-item">
+                <span class="label">Status</span>
+                <span id="res-status"></span>
+            </div>
+            <div class="result-item">
+                <span class="label">Summary</span>
+                <span id="res-summary"></span>
+            </div>
+            <div class="result-item">
+                <span class="label">Metadata</span>
+                <code id="res-meta" style="color: var(--accent-color); font-size: 0.75rem;"></code>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function capture() {
+            const content = document.getElementById('content').value;
+            const source = document.getElementById('source').value;
+            const btn = document.querySelector('button');
+            const loader = document.getElementById('loading');
+            const resultDiv = document.getElementById('result');
+
+            if (!content) return;
+
+            // UI State: Loading
+            btn.disabled = true;
+            loader.style.display = 'block';
+            resultDiv.style.display = 'none';
+
+            try {
+                const response = await fetch(`http://localhost:8000/collect?content=${encodeURIComponent(content)}&source=${encodeURIComponent(source)}`, {
+                    method: 'POST'
+                });
+
+                const data = await response.json();
+
+                // UI State: Success
+                document.getElementById('res-status').innerText = data.status;
+                document.getElementById('res-summary').innerText = data.summary;
+                document.getElementById('res-meta').innerText = JSON.stringify(data.metadata);
+                
+                resultDiv.style.display = 'block';
+                document.getElementById('content').value = '';
+            } catch (error) {
+                alert('Capture failed: Ensure backend is running at http://localhost:8000');
+                console.error(error);
+            } finally {
+                btn.disabled = false;
+                loader.style.display = 'none';
+            }
+        }
+    </script>
+</body>
+</html>

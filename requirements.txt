@@ -1,0 +1,11 @@
+langchain
+langchain-openai
+langgraph
+qdrant-client
+fastapi
+uvicorn
+python-dotenv
+pydantic
+pydantic-settings
+tiktoken
+markdown
