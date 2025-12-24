@@ -1,15 +1,11 @@
 ---
-title: project-sphere
-emoji: 🐨
-colorFrom: indigo
-colorTo: slate
+title: Project Sphere
+emoji: 🪐
+colorFrom: blue
+colorTo: purple
 sdk: docker
 pinned: false
 ---
 
 # Project Sphere
 AI-Native Independent Second Brain.
-
-- **SDK**: Docker (FastAPI + LangGraph)
-- **Port**: 7860
-- **Memory**: 3-Tier Layered memory
