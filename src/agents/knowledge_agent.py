@@ -49,6 +49,8 @@ def extraction_node(state: AgentState):
     
     try:
         # 向 LLM 发起指令
+        logger.info(f"--- [Extraction Start] ---")
+        logger.info(f"Targeting content for extraction (length: {len(state['content'])})")
         response = llm.invoke([
             SystemMessage(content="你是一位严谨的知识架构师。你只输出纯 JSON，不输出任何解释或 Markdown 标记。"), 
             HumanMessage(content=prompt)
@@ -56,6 +58,8 @@ def extraction_node(state: AgentState):
         
         # 兼容性清洗：移除可能存在的 Markdown 代码块标记 (如 ```json)
         raw_content = response.content.strip()
+        logger.info(f"Raw LLM Extraction Output: {raw_content[:200]}...")
+        
         if raw_content.startswith("```json"):
             raw_content = raw_content[7:-3].strip()
         elif raw_content.startswith("```"):
@@ -71,35 +75,58 @@ def extraction_node(state: AgentState):
             "processed": True
         }
         state["status"] = "processed"
+        logger.info(f"Successfully extracted summary: {state['summary']}")
+        logger.info(f"Keywords identified: {state['metadata']['keywords']}")
+        logger.info("--- [Extraction End] ---")
     except Exception as e:
-        logger.error(f"LLM 处理失败: {e} | 原始内容: {response.content if 'response' in locals() else 'N/A'}")
+        logger.error(f"LLM 提取失败: {e}", exc_info=True)
         state["status"] = "processed_with_error"
         state["summary"] = "AI 分析过程中出现异常。"
         
     return state
 
-from src.storage.obsidian_sync import save_to_obsidian
+# 独立产品化：移除物理同步依赖
 
 def storage_node(state: AgentState):
     """
-    存储节点：双路持久化。
-    1. 存入 Obsidian (物理 Markdown 文件，用户可见)
-    2. 存入 Qdrant (向量索引，用于后续语义检索 - 待增强)
+    存储节点：独立产品化重构。
+    将“灵感”持久化至云端 facts.json (Beta L3 事实云)。
     """
-    logger.info("正在执行物理落地...")
+    import json
+    import os
+    from datetime import datetime
     
-    # 模拟物理存入 Obsidian
+    logger.info("--- [Cloud Storage Process] ---")
+    
+    fact_entry = {
+        "timestamp": datetime.now().isoformat(),
+        "summary": state["summary"],
+        "content": state["content"],
+        "metadata": state["metadata"]
+    }
+
+    # 路径适配云端环境
+    facts_file = os.path.join("data", "facts.json")
+    os.makedirs("data", exist_ok=True)
+
     try:
-        filename = save_to_obsidian(
-            content=state["content"],
-            summary=state["summary"],
-            metadata=state["metadata"]
-        )
-        state["status"] = f"已持久化到 Obsidian: {filename}"
-    except Exception as e:
-        logger.error(f"物理解析失败: {e}")
-        state["status"] = "AI 处理成功，但文件写入失败"
+        facts = []
+        if os.path.exists(facts_file):
+            with open(facts_file, "r", encoding="utf-8") as f:
+                facts = json.load(f)
         
+        facts.append(fact_entry)
+        
+        with open(facts_file, "w", encoding="utf-8") as f:
+            json.dump(facts, f, ensure_ascii=False, indent=2)
+            
+        logger.info(f"Fact accumulated. Total facts: {len(facts)}")
+        state["status"] = "captured_in_cloud"
+    except Exception as e:
+        logger.error(f"Failed to save fact: {e}")
+        state["status"] = "storage_failed"
+
+    logger.info("--- [Storage Process End] ---")
     return state
 
 # 构建 LangGraph 图拓扑

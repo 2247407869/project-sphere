@@ -1,15 +1,19 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Project Sphere | Mobile Brain</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Outfit:wght@300;600&display=swap" rel="stylesheet">
+    <title>Project Sphere | Dialogue</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Outfit:wght@300;600&display=swap"
+        rel="stylesheet">
     <style>
         :root {
             --bg-color: #0d0d12;
-            --card-bg: rgba(255, 255, 255, 0.05);
+            --card-bg: rgba(255, 255, 255, 0.03);
             --accent-color: #6366f1;
+            --user-msg-bg: #6366f1;
+            --ai-msg-bg: rgba(255, 255, 255, 0.08);
             --text-primary: #f8fafc;
             --text-secondary: #94a3b8;
             --glass-border: rgba(255, 255, 255, 0.1);
@@ -26,58 +30,131 @@
             font-family: 'Inter', sans-serif;
             background-color: var(--bg-color);
             color: var(--text-primary);
+            height: 100vh;
             display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
+            flex-direction: column;
             overflow: hidden;
         }
 
-        .container {
-            width: 90%;
-            max-width: 400px;
-            padding: 2rem;
-            background: var(--card-bg);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid var(--glass-border);
-            border-radius: 24px;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-            animation: fadeIn 0.8s ease-out;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
+        /* Header */
+        header {
+            padding: 1.5rem;
+            background: rgba(13, 13, 18, 0.8);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--glass-border);
+            text-align: center;
+            z-index: 10;
         }
 
         h1 {
             font-family: 'Outfit', sans-serif;
-            font-size: 1.8rem;
-            font-weight: 600;
-            margin-bottom: 0.5rem;
+            font-size: 1.4rem;
             background: linear-gradient(135deg, #fff 0%, var(--accent-color) 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
 
-        p.subtitle {
-            font-size: 0.9rem;
+        /* Chat Area */
+        /* Memory Bar */
+        #memory-bar {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--glass-border);
+            padding: 0.7rem 1.2rem;
+            font-size: 0.8rem;
             color: var(--text-secondary);
-            margin-bottom: 2rem;
+            z-index: 5;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.5rem;
+            max-height: 80px;
+            overflow-y: auto;
         }
 
-        .input-group {
-            margin-bottom: 1.5rem;
+        #memory-bar strong {
+            color: var(--accent-color);
+            white-space: nowrap;
+        }
+
+        #chat-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            scroll-behavior: smooth;
+        }
+
+        .message {
+            max-width: 85%;
+            padding: 1rem 1.2rem;
+            border-radius: 20px;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            position: relative;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .user-message {
+            align-self: flex-end;
+            background: var(--user-msg-bg);
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .ai-message {
+            align-self: flex-start;
+            background: var(--ai-msg-bg);
+            border: 1px solid var(--glass-border);
+            border-bottom-left-radius: 4px;
+        }
+
+        .ai-message::before {
+            content: 'Sphere';
+            position: absolute;
+            top: -1.2rem;
+            left: 0.2rem;
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        /* Input Area */
+        .input-area {
+            padding: 1.2rem;
+            background: rgba(13, 13, 18, 0.9);
+            border-top: 1px solid var(--glass-border);
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+        }
+
+        .input-row {
+            display: flex;
+            gap: 0.8rem;
         }
 
         textarea {
-            width: 100%;
-            height: 120px;
-            background: rgba(0, 0, 0, 0.2);
+            flex: 1;
+            height: 50px;
+            background: rgba(255, 255, 255, 0.05);
             border: 1px solid var(--glass-border);
-            border-radius: 12px;
-            padding: 1rem;
+            border-radius: 16px;
+            padding: 0.8rem 1.2rem;
             color: var(--text-primary);
             font-family: inherit;
             font-size: 1rem;
@@ -90,162 +167,255 @@
             border-color: var(--accent-color);
         }
 
-        .source-input {
-            width: 100%;
-            background: rgba(0, 0, 0, 0.2);
-            border: 1px solid var(--glass-border);
-            border-radius: 12px;
-            padding: 0.8rem 1rem;
-            color: var(--text-primary);
-            font-size: 0.9rem;
-            margin-top: 0.5rem;
-            outline: none;
-        }
-
-        button {
-            width: 100%;
-            padding: 1rem;
+        .btn-circle {
+            width: 50px;
+            height: 50px;
             background: var(--accent-color);
             border: none;
-            border-radius: 12px;
-            color: white;
-            font-weight: 600;
-            font-size: 1rem;
-            cursor: pointer;
-            transition: filter 0.3s ease, transform 0.2s ease;
-            box-shadow: 0 10px 15px -3px rgba(99, 102, 241, 0.3);
-        }
-
-        button:active {
-            transform: scale(0.98);
-        }
-
-        button:hover {
-            filter: brightness(1.1);
-        }
-
-        .result {
-            margin-top: 2rem;
-            padding: 1rem;
-            background: rgba(0, 0, 0, 0.15);
-            border-radius: 12px;
-            font-size: 0.85rem;
-            display: none;
-            animation: slideUp 0.4s ease-out;
-        }
-
-        @keyframes slideUp {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .result-item {
-            margin-bottom: 0.5rem;
-        }
-
-        .label {
-            color: var(--text-secondary);
-            font-size: 0.75rem;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            display: block;
-        }
-
-        .loading {
-            display: none;
-            margin-top: 1rem;
-            text-align: center;
-            font-size: 0.8rem;
-            color: var(--accent-color);
-        }
-
-        /* Micro-animations */
-        .spinner {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 2px solid rgba(99, 102, 241, 0.3);
-            border-top-color: var(--accent-color);
             border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-            vertical-align: middle;
-            margin-right: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
         }
 
-        @keyframes spin {
-            to { transform: rotate(360deg); }
+        .action-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .capture-btn {
+            background: transparent;
+            border: 1px solid var(--accent-color);
+            color: var(--accent-color);
+            padding: 0.4rem 1rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        /* Loading */
+        .typing {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-left: 0.5rem;
+            display: none;
+        }
+
+        /* Scrollbar */
+        #chat-container::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        #chat-container::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
         }
     </style>
 </head>
+
 <body>
-    <div class="container">
+    <header>
         <h1>Project Sphere</h1>
-        <p class="subtitle">The Mobile Brain Integration</p>
-        
-        <div class="input-group">
-            <textarea id="content" placeholder="Capture the flash of insight..."></textarea>
-            <input type="text" id="source" class="source-input" value="mobile" placeholder="Source (e.g., mobile, web)">
+    </header>
+
+    <div id="memory-bar">
+        <strong>Context:</strong> <span id="memory-content">正在唤醒记忆...</span>
+    </div>
+
+    <div id="chat-container">
+        <div class="message ai-message">
+            欢迎来到 Sphere。我是你的第二大脑。你可以直接呼唤我，或者点击下方“Capture”将内容物理同步至 Obsidian。
         </div>
+    </div>
 
-        <button onclick="capture()">Capture Insight</button>
-
-        <div id="loading" class="loading">
-            <div class="spinner"></div> Processing...
+    <div class="input-area">
+        <div class="action-row">
+            <span id="typing-indicator" class="typing">Sphere 正在思考...</span>
+            <button class="capture-btn" onclick="triggerCapture()">Capture to Obsidian</button>
         </div>
-
-        <div id="result" class="result">
-            <div class="result-item">
-                <span class="label">Status</span>
-                <span id="res-status"></span>
-            </div>
-            <div class="result-item">
-                <span class="label">Summary</span>
-                <span id="res-summary"></span>
-            </div>
-            <div class="result-item">
-                <span class="label">Metadata</span>
-                <code id="res-meta" style="color: var(--accent-color); font-size: 0.75rem;"></code>
-            </div>
+        <div class="input-row">
+            <textarea id="msg-input" placeholder="输入灵感或问题..."></textarea>
+            <button class="btn-circle" onclick="sendMessage()">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round" style="color: white;">
+                    <line x1="22" y1="2" x2="11" y2="13"></line>
+                    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                </svg>
+            </button>
         </div>
     </div>
 
     <script>
-        async function capture() {
-            const content = document.getElementById('content').value;
-            const source = document.getElementById('source').value;
-            const btn = document.querySelector('button');
-            const loader = document.getElementById('loading');
-            const resultDiv = document.getElementById('result');
+        const chatContainer = document.getElementById('chat-container');
+        const msgInput = document.getElementById('msg-input');
+        const typingIndicator = document.getElementById('typing-indicator');
+        const memoryContent = document.getElementById('memory-content');
+        let history = [];
+        let lastSentContent = ''; // 缓存最后一次发送的内容
+        let currentSummary = '';  // 存储 L2 动态摘要
 
-            if (!content) return;
+        // --- 简单鉴权保护 ---
+        function checkAuth() {
+            if (localStorage.getItem('sphere_auth') === 'verified') return true;
+            const pass = prompt("Project Sphere 独立访问暗号：");
+            if (pass === '2026') {
+                localStorage.setItem('sphere_auth', 'verified');
+                return true;
+            }
+            alert("暗号错误，拒绝访问。");
+            document.body.innerHTML = "<h1 style='color:white;text-align:center;margin-top:20%'>403 Forbidden</h1>";
+            return false;
+        }
 
-            // UI State: Loading
-            btn.disabled = true;
-            loader.style.display = 'block';
-            resultDiv.style.display = 'none';
+        // --- 初始化：从本地存储恢复记忆 ---
+        window.onload = () => {
+            if (!checkAuth()) return;
+            const savedHistory = localStorage.getItem('sphere_history');
+            const savedSummary = localStorage.getItem('sphere_summary');
+
+            if (savedHistory) {
+                history = JSON.parse(savedHistory);
+                chatContainer.innerHTML = ''; // 清除默认欢迎词，渲染历史
+                history.forEach(item => {
+                    addMessage(item.content, item.role === 'user' ? 'user' : 'ai', false);
+                });
+            }
+            if (savedSummary) {
+                currentSummary = savedSummary;
+                memoryContent.innerText = currentSummary;
+            } else {
+                memoryContent.innerText = "暂无历史记忆，开始对话以建立上下文。";
+            }
+            console.log("Memory Restored:", { historyLen: history.length, hasSummary: !!currentSummary });
+        };
+
+        async function sendMessage() {
+            const text = msgInput.value.trim();
+            if (!text) return;
+
+            lastSentContent = text; // 更新缓存
+            addMessage(text, 'user');
+            msgInput.value = '';
+
+            // 创建一个占位的 AI 消息容器
+            const aiMsgDiv = addMessage('', 'ai');
+            typingIndicator.style.display = 'block';
 
             try {
-                const response = await fetch(`http://localhost:8000/collect?content=${encodeURIComponent(content)}&source=${encodeURIComponent(source)}`, {
-                    method: 'POST'
+                const response = await fetch(`/chat`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        message: text,
+                        history: history,
+                        summary: currentSummary
+                    })
                 });
 
-                const data = await response.json();
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let fullContent = "";
 
-                // UI State: Success
-                document.getElementById('res-status').innerText = data.status;
-                document.getElementById('res-summary').innerText = data.summary;
-                document.getElementById('res-meta').innerText = JSON.stringify(data.metadata);
-                
-                resultDiv.style.display = 'block';
-                document.getElementById('content').value = '';
-            } catch (error) {
-                alert('Capture failed: Ensure backend is running at http://localhost:8000');
-                console.error(error);
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    const chunk = decoder.decode(value, { stream: true });
+                    fullContent += chunk;
+
+                    // 检查是否包含元数据标记
+                    if (fullContent.includes('[METADATA]')) {
+                        const parts = fullContent.split('[METADATA]');
+                        // 展示正文部分 (屏蔽元数据)
+                        aiMsgDiv.innerText = parts[0];
+
+                        // 只有当流结束或者 JSON 看起来完整时再尝试解析
+                        // 这里我们采取保守策略：在循环结束后再统一解析最终元数据
+                    } else {
+                        aiMsgDiv.innerText = fullContent;
+                    }
+                    chatContainer.scrollTop = chatContainer.scrollHeight;
+                }
+
+                // 流结束后的最终处理：解析完整的元数据
+                if (fullContent.includes('[METADATA]')) {
+                    const parts = fullContent.split('[METADATA]');
+                    aiMsgDiv.innerText = parts[0]; // 确保最终显示不含标记位
+                    try {
+                        const metadata = JSON.parse(parts[1]);
+                        history = metadata.history || [];
+                        currentSummary = metadata.summary || '';
+                        memoryContent.innerText = currentSummary || "记忆已同步";
+                        localStorage.setItem('sphere_history', JSON.stringify(history));
+                        localStorage.setItem('sphere_summary', currentSummary);
+                        console.log("Stream Finished. Memory Synced.");
+                    } catch (e) {
+                        console.error("Final Metadata Parse Error", e);
+                    }
+                }
+
+            } catch (err) {
+                aiMsgDiv.innerText = '连接失败，请检查后端服务。';
             } finally {
-                btn.disabled = false;
-                loader.style.display = 'none';
+                typingIndicator.style.display = 'none';
             }
         }
+
+        async function triggerCapture() {
+            // 优先捕获输入框内容，若为空则尝试捕获最后一条发送的消息
+            let text = msgInput.value.trim();
+            if (!text) {
+                text = lastSentContent;
+            }
+
+            if (!text) {
+                alert('请先输入需要捕获的内容，或发送一条消息。');
+                return;
+            }
+
+            typingIndicator.innerText = '正在物理同步...';
+            typingIndicator.style.display = 'block';
+
+            try {
+                const response = await fetch(`/collect`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ content: text, source: 'mobile_chat' })
+                });
+                const data = await response.json();
+                addMessage(`✅ 灵感已同步至云端事实云 (L3)\n摘要：${data.summary}`, 'ai');
+                if (msgInput.value.trim() === text) {
+                    msgInput.value = '';
+                }
+            } catch (err) {
+                alert('捕获失败');
+            } finally {
+                typingIndicator.style.display = 'none';
+                typingIndicator.innerText = 'Sphere 正在思考...';
+            }
+        }
+
+        function addMessage(text, role, smooth = true) {
+            const div = document.createElement('div');
+            div.className = `message ${role}-message`;
+            div.innerText = text;
+            if (!smooth) div.style.animation = 'none'; // 恢复历史时禁用动画，避免闪烁
+            chatContainer.appendChild(div);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+            return div;
+        }
+
+        msgInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
     </script>
 </body>
+
 </html>
