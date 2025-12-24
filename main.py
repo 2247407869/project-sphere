@@ -59,6 +59,20 @@ async def collect_knowledge(req: CollectRequest):
         "metadata": result["metadata"]
     }
 
+@app.get("/facts")
+async def get_facts():
+    """读取云端事实归档 (L3 记忆)"""
+    import json
+    import os
+    facts_file = os.path.join("data", "facts.json")
+    if os.path.exists(facts_file):
+        try:
+            with open(facts_file, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception as e:
+            return {"error": f"Failed to read facts: {e}"}
+    return []
+
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import StreamingResponse, FileResponse
 import json

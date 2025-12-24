@@ -65,15 +65,73 @@
             color: var(--text-secondary);
             z-index: 5;
             display: flex;
-            align-items: flex-start;
+            align-items: center;
+            justify-content: space-between;
             gap: 0.5rem;
             max-height: 80px;
-            overflow-y: auto;
         }
 
-        #memory-bar strong {
-            color: var(--accent-color);
+        #memory-content {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
             white-space: nowrap;
+        }
+
+        .vault-btn {
+            background: rgba(99, 102, 241, 0.2);
+            border: 1px solid var(--accent-color);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        /* 事实看板模态框 */
+        #fact-vault {
+            display: none;
+            position: fixed;
+            top: 10%;
+            left: 5%;
+            width: 90%;
+            height: 80%;
+            background: rgba(13, 13, 18, 0.98);
+            backdrop-filter: blur(25px);
+            z-index: 2000;
+            border-radius: 24px;
+            border: 1px solid var(--glass-border);
+            padding: 1.5rem;
+            overflow-y: auto;
+            color: var(--text-primary);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8);
+        }
+
+        .fact-item {
+            background: rgba(255, 255, 255, 0.03);
+            margin-bottom: 1rem;
+            padding: 1rem;
+            border-radius: 16px;
+            border-left: 3px solid var(--accent-color);
+        }
+
+        .fact-time {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.3rem;
+        }
+
+        .fact-summary {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--accent-color);
+        }
+
+        .fact-origin {
+            font-size: 0.85rem;
+            opacity: 0.8;
+            line-height: 1.4;
         }
 
         #chat-container {
@@ -223,7 +281,17 @@
     </header>
 
     <div id="memory-bar">
-        <strong>Context:</strong> <span id="memory-content">正在唤醒记忆...</span>
+        <span><strong>Context:</strong> <span id="memory-content">正在唤醒记忆...</span></span>
+        <button class="vault-btn" onclick="toggleVault()">事实宝库</button>
+    </div>
+
+    <!-- 事实看板 -->
+    <div id="fact-vault">
+        <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+            <h2 style="font-family:'Outfit', sans-serif;">L3 事实归档</h2>
+            <button class="vault-btn" onclick="toggleVault()">关闭</button>
+        </div>
+        <div id="vault-list"></div>
     </div>
 
     <div id="chat-container">
@@ -235,7 +303,7 @@
     <div class="input-area">
         <div class="action-row">
             <span id="typing-indicator" class="typing">Sphere 正在思考...</span>
-            <button class="capture-btn" onclick="triggerCapture()">Capture to Obsidian</button>
+            <button class="capture-btn" onclick="triggerCapture()">Capture to Cloud</button>
         </div>
         <div class="input-row">
             <textarea id="msg-input" placeholder="输入灵感或问题..."></textarea>
@@ -407,6 +475,38 @@
             chatContainer.appendChild(div);
             chatContainer.scrollTop = chatContainer.scrollHeight;
             return div;
+        }
+
+        async function toggleVault() {
+            const vault = document.getElementById('fact-vault');
+            if (vault.style.display === 'block') {
+                vault.style.display = 'none';
+                return;
+            }
+
+            vault.style.display = 'block';
+            const list = document.getElementById('vault-list');
+            list.innerHTML = '正在读取事实云...';
+
+            try {
+                const response = await fetch('/facts');
+                const facts = await response.json();
+
+                if (facts.length === 0) {
+                    list.innerHTML = '<div style="text-align:center; margin-top:50px; opacity:0.5;">宝库尚空，完成 Capture 以归档事实。</div>';
+                    return;
+                }
+
+                list.innerHTML = facts.reverse().map(f => `
+                    <div class="fact-item">
+                        <div class="fact-time">${new Date(f.timestamp).toLocaleString()}</div>
+                        <div class="fact-summary">${f.summary}</div>
+                        <div class="fact-origin">"${f.content.substring(0, 100)}${f.content.length > 100 ? '...' : ''}"</div>
+                    </div>
+                `).join('');
+            } catch (e) {
+                list.innerHTML = '读取失败：' + e.message;
+            }
         }
 
         msgInput.addEventListener('keypress', (e) => {
