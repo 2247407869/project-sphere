@@ -1,11 +1,10 @@
 ---
-title: Project Sphere
+title: project-sphere
+sdk: docker
 emoji: 🪐
 colorFrom: indigo
 colorTo: slate
-sdk: docker
 pinned: false
-app_port: 7860
 ---
 
 # Project Sphere
