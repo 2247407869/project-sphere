@@ -175,7 +175,6 @@ async def chat_with_agent(req: ChatRequest):
                 原提要：{req.summary}
                 新增内容：{new_history[-1]["content"]} 
                 """
-                """
                 # 注意：摘要生成升级为异步 ainvoke 以保证非阻塞
                 summary_response = await llm.ainvoke([
                     SystemMessage(content="你是一位记忆管理专家。你只输出极致压缩后的事实总结，不含废话。"),
