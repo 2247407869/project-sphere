@@ -51,6 +51,7 @@
             font-size: 1.4rem;
             background: linear-gradient(135deg, #fff 0%, var(--accent-color) 100%);
             -webkit-background-clip: text;
+            background-clip: text;
             -webkit-text-fill-color: transparent;
         }
 
@@ -339,9 +340,28 @@
             return false;
         }
 
-        // --- 初始化：从本地存储恢复记忆 ---
-        window.onload = () => {
+        // --- 初始化：从本地存储/云端恢复记忆 ---
+        window.onload = async () => {
             if (!checkAuth()) return;
+
+            // 优先尝试从云端恢复历史，实现多端同步
+            try {
+                const response = await fetch('/session/load');
+                const data = await response.json();
+                if (data.history && data.history.length > 0) {
+                    history = data.history;
+                    currentSummary = data.summary || '';
+                    chatContainer.innerHTML = '';
+                    history.forEach(item => {
+                        addMessage(item.content, item.role === 'user' ? 'user' : 'ai', false);
+                    });
+                    memoryContent.innerText = currentSummary || '暂无上下文摘要';
+                    return;
+                }
+            } catch (e) {
+                console.error("Cloud load failed, falling back to local:", e);
+            }
+
             const savedHistory = localStorage.getItem('sphere_history');
             const savedSummary = localStorage.getItem('sphere_summary');
 
@@ -358,7 +378,6 @@
             } else {
                 memoryContent.innerText = "暂无历史记忆，开始对话以建立上下文。";
             }
-            console.log("Memory Restored:", { historyLen: history.length, hasSummary: !!currentSummary });
         };
 
         async function sendMessage() {
@@ -418,18 +437,31 @@
                         history = metadata.history || [];
                         currentSummary = metadata.summary || '';
                         memoryContent.innerText = currentSummary || "记忆已同步";
+
+                        // 同步至本地与云端
                         localStorage.setItem('sphere_history', JSON.stringify(history));
                         localStorage.setItem('sphere_summary', currentSummary);
-                        console.log("Stream Finished. Memory Synced.");
+                        syncToCloud();
                     } catch (e) {
                         console.error("Final Metadata Parse Error", e);
                     }
                 }
-
             } catch (err) {
                 aiMsgDiv.innerText = '连接失败，请检查后端服务。';
             } finally {
                 typingIndicator.style.display = 'none';
+            }
+        }
+
+        async function syncToCloud() {
+            try {
+                await fetch('/session/sync', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ history, summary: currentSummary })
+                });
+            } catch (e) {
+                console.warn("Cloud sync failed:", e);
             }
         }
 

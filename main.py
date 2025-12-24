@@ -73,6 +73,38 @@ async def get_facts():
             return {"error": f"Failed to read facts: {e}"}
     return []
 
+class SessionSyncRequest(BaseModel):
+    history: list
+    summary: str
+
+@app.get("/session/load")
+async def load_session():
+    """从云端恢复会话状态"""
+    import json
+    import os
+    session_file = os.path.join("data", "sessions.json")
+    if os.path.exists(session_file):
+        try:
+            with open(session_file, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return {"history": [], "summary": ""}
+
+@app.post("/session/sync")
+async def sync_session(req: SessionSyncRequest):
+    """同步会话状态至云端"""
+    import json
+    import os
+    session_file = os.path.join("data", "sessions.json")
+    os.makedirs("data", exist_ok=True)
+    try:
+        with open(session_file, "w", encoding="utf-8") as f:
+            json.dump({"history": req.history, "summary": req.summary}, f, ensure_ascii=False, indent=2)
+        return {"status": "synced"}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import StreamingResponse, FileResponse
 import json
