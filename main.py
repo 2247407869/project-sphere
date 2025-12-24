@@ -165,9 +165,11 @@ async def chat_with_agent(req: ChatRequest):
             
             if len(new_history) >= 12: # 稍微提高阈值以减少压缩频率
                 logger.info("!! [TMA Triggered] Detection of long context, initiating L2 compression...")
-                compress_prompt = f"""
-                基于以下【前情提要】和【新增对话】，生成一个精炼、结构化的新摘要（100字以内）。
-                要求：采用无序列表形式列出核心事实，保留用户最新的职业战略状态，移除陈旧细节。
+                基于以下【前情提要】和【新增对话】，生成一个内容丰满且结构化的新摘要（300字以内）。
+                要求：
+                1. 采用无序列表形式。
+                2. 必须保留关键的技术参数、核心架构决策、用户显式提及的重要偏好。
+                3. 保留当前未完成的待办任务。
                 
                 原提要：{req.summary}
                 新增内容：{new_history[-1]["content"]} 

@@ -78,8 +78,9 @@
 
         #memory-bar.expanded {
             max-height: 40vh;
-            /* 展开至屏幕 40% */
-            background: rgba(13, 13, 18, 0.95);
+            background: rgba(13, 13, 18, 0.98);
+            overflow-y: auto;
+            /* 允许父容器滚动 */
         }
 
         #memory-content {
@@ -90,7 +91,6 @@
         }
 
         #memory-bar.expanded #memory-content {
-            overflow-y: auto;
             opacity: 1;
         }
 
