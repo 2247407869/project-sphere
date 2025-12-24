@@ -66,18 +66,32 @@
             color: var(--text-secondary);
             z-index: 5;
             display: flex;
-            align-items: center;
+            align-items: flex-start;
             justify-content: space-between;
             gap: 0.5rem;
-            max-height: 80px;
+            max-height: 48px;
+            /* 默认紧凑高度 */
+            transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow: hidden;
+            cursor: pointer;
+        }
+
+        #memory-bar.expanded {
+            max-height: 40vh;
+            /* 展开至屏幕 40% */
+            background: rgba(13, 13, 18, 0.95);
         }
 
         #memory-content {
             flex: 1;
-            line-height: 1.4;
-            max-height: 60px;
-            overflow-y: auto;
+            line-height: 1.5;
             word-break: break-word;
+            opacity: 0.8;
+        }
+
+        #memory-bar.expanded #memory-content {
+            overflow-y: auto;
+            opacity: 1;
         }
 
         .vault-btn {
@@ -282,9 +296,9 @@
         <h1>Project Sphere</h1>
     </header>
 
-    <div id="memory-bar">
+    <div id="memory-bar" onclick="toggleMemoryBar(event)">
         <span><strong>Context:</strong> <span id="memory-content">正在唤醒记忆...</span></span>
-        <button class="vault-btn" onclick="toggleVault()">事实宝库</button>
+        <button class="vault-btn" onclick="toggleVault(); event.stopPropagation();">事实宝库</button>
     </div>
 
     <!-- 事实看板 -->
@@ -540,6 +554,13 @@
             } catch (e) {
                 list.innerHTML = '读取失败：' + e.message;
             }
+        }
+
+        function toggleMemoryBar(e) {
+            // 防止点击按钮触发折叠
+            if (e.target.closest('.vault-btn')) return;
+            const bar = document.getElementById('memory-bar');
+            bar.classList.toggle('expanded');
         }
 
         msgInput.addEventListener('keypress', (e) => {
