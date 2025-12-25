@@ -410,45 +410,50 @@
             return false;
         }
 
-        // --- 初始化：从本地存储/云端恢复记忆 ---
+        // --- 初始化：本地优先 + 自动回填云端 ---
         window.onload = async () => {
             if (!checkAuth()) return;
 
-            // 优先尝试从云端恢复历史，实现多端同步
-            try {
-                const response = await fetch('/session/load');
-                const data = await response.json();
-                if (data.history && data.history.length > 0) {
-                    history = data.history;
-                    currentSummary = data.summary || '';
-                    chatContainer.innerHTML = '';
-                    history.forEach(item => {
-                        addMessage(item.content, item.role === 'user' ? 'user' : 'ai', false);
-                    });
-                    memoryContent.innerText = currentSummary || '暂无上下文摘要';
-                    return;
-                }
-            } catch (e) {
-                console.error("Cloud load failed, falling back to local:", e);
-            }
-
+            // 1. 基准：先从本地磁盘加载，确保无论服务器状态如何，用户都能立刻看到记录
             const savedHistory = localStorage.getItem('sphere_history');
             const savedSummary = localStorage.getItem('sphere_summary');
 
             if (savedHistory) {
                 history = JSON.parse(savedHistory);
-                chatContainer.innerHTML = ''; // 清除默认欢迎词，渲染历史
-                history.forEach(item => {
-                    addMessage(item.content, item.role === 'user' ? 'user' : 'ai', false);
-                });
+                currentSummary = savedSummary || '';
+                renderHistory(); // 抽离渲染函数
             }
-            if (savedSummary) {
-                currentSummary = savedSummary;
-                memoryContent.innerText = currentSummary;
-            } else {
-                memoryContent.innerText = "暂无历史记忆，开始对话以建立上下文。";
+
+            // 2. 同步：尝试从云端对齐
+            try {
+                const response = await fetch('/session/load');
+                const data = await response.json();
+
+                // 核心逻辑：如果云端有更长/更新的历史，则同步云端
+                if (data.history && data.history.length >= history.length) {
+                    history = data.history;
+                    currentSummary = data.summary || '';
+                    renderHistory();
+                    localStorage.setItem('sphere_history', JSON.stringify(history));
+                    localStorage.setItem('sphere_summary', currentSummary);
+                }
+                // 关键点：如果服务器是空（重启后），且本地有数据，则反向回填给服务器
+                else if (history.length > 0 && (!data.history || data.history.length === 0)) {
+                    console.log("Detected server wipe after update, re-hydrating cloud...");
+                    syncToCloud();
+                }
+            } catch (e) {
+                console.warn("Cloud load failed, operating in local-only mode.", e);
             }
         };
+
+        function renderHistory() {
+            chatContainer.innerHTML = '';
+            history.forEach(item => {
+                addMessage(item.content, item.role === 'user' ? 'user' : 'ai', false);
+            });
+            memoryContent.innerText = currentSummary || '暂无上下文摘要';
+        }
 
         async function sendMessage() {
             const text = msgInput.value.trim();
