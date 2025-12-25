@@ -482,15 +482,18 @@
             const aiMsgDiv = addMessage('', 'ai');
             typingIndicator.style.display = 'block';
 
+            const payload = {
+                message: text,
+                history: history,
+                summary: currentSummary
+            };
+            console.info("📤 [API Request Payload]:", payload);
+
             try {
                 const response = await fetch(`/chat`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        message: text,
-                        history: history,
-                        summary: currentSummary
-                    })
+                    body: JSON.stringify(payload)
                 });
 
                 const reader = response.body.getReader();
