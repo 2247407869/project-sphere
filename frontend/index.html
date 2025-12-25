@@ -421,7 +421,7 @@
             if (savedHistory) {
                 history = JSON.parse(savedHistory);
                 currentSummary = savedSummary || '';
-                renderHistory(); // 抽离渲染函数
+                await renderHistory(); // 异步渲染
             }
 
             // 2. 同步：尝试从云端对齐
@@ -433,7 +433,7 @@
                 if (data.history && data.history.length >= history.length) {
                     history = data.history;
                     currentSummary = data.summary || '';
-                    renderHistory();
+                    await renderHistory();
                     localStorage.setItem('sphere_history', JSON.stringify(history));
                     localStorage.setItem('sphere_summary', currentSummary);
                 }
@@ -447,12 +447,24 @@
             }
         };
 
-        function renderHistory() {
+        async function renderHistory() {
             chatContainer.innerHTML = '';
             history.forEach(item => {
                 addMessage(item.content, item.role === 'user' ? 'user' : 'ai', false);
             });
-            memoryContent.innerText = currentSummary || '暂无上下文摘要';
+
+            // 恢复 L2.5 + L2 的组合显示
+            let displayContent = "";
+            try {
+                const pRes = await fetch('/pinned');
+                const pinned = await pRes.json();
+                if (pinned && pinned.length > 0) {
+                    displayContent += "📌 [锁定事实]:\n" + pinned.map(f => `• ${f}`).join('\n') + "\n\n";
+                }
+            } catch (e) { console.warn("Load pinned failed in renderHistory", e); }
+
+            displayContent += "📝 [动态摘要]:\n" + (currentSummary || "尚无动态摘要");
+            memoryContent.innerText = displayContent;
         }
 
         async function sendMessage() {

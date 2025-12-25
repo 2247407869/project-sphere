@@ -221,6 +221,9 @@ async def chat_with_agent(req: ChatRequest):
         if pinned_facts:
             system_content += "\n\n【核心锁定事实（永不压缩）】:\n" + "\n".join([f"- {f}" for f in pinned_facts])
             
+        if req.summary:
+            system_content += f"\n\n【前情提要（动态记忆）】：\n{req.summary}"
+            
         # --- 日志追踪：暴露给李林松看的上下文 ---
         logger.info(f">>> [System Prompt Context]:\n{system_content}")
         logger.info(f">>> [Chat History Window]: {len(req.history)} messages")
