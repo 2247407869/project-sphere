@@ -234,7 +234,16 @@ async def chat_with_agent(req: ChatRequest):
                 messages.append(HumanMessage(content=h["content"]))
             else:
                 messages.append(AIMessage(content=h["content"]))
+        
+        # 补上当前最后一条用户的提问
         messages.append(HumanMessage(content=req.message))
+
+        # --- 核心调试日志：打印发送给 Deepseek 的原始文本序列 ---
+        logger.info("========== [DEEPSEEK RAW PROMPT START] ==========")
+        for i, m in enumerate(messages):
+            role_map = {SystemMessage: "SYSTEM", HumanMessage: "USER", AIMessage: "ASSISTANT"}
+            logger.info(f"[{i}] {role_map.get(type(m), 'UNKNOWN')}: {m.content[:500]}...") # 限制单条打印长度防止刷屏
+        logger.info("========== [DEEPSEEK RAW PROMPT END] ==========")
 
         full_content = ""
         try:
@@ -357,9 +366,13 @@ async def chat_with_agent(req: ChatRequest):
                 "pinned_facts": current_pinned,
                 "todos": current_todos,
                 "debug": {
+                    "raw_prompt": [
+                        {"role": "system" if isinstance(m, SystemMessage) else "user" if isinstance(m, HumanMessage) else "assistant", "content": m.content} 
+                        for m in messages
+                    ],
                     "latency": {
-                        "total": f"{end_time - start_time:.2f}s",
-                        "llm_chat": f"{chat_done_time - start_time:.2f}s"
+                        "llm_chat": f"{chat_done_time - start_time:.2f}s",
+                        "total": f"{end_time - start_time:.2f}s"
                     },
                     "system_prompt": system_content,
                     "history_count": len(req.history)

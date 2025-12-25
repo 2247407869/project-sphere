@@ -549,10 +549,13 @@
                         }
 
                         if (metadata.debug) {
-                            console.group("🤖 [Sphere Debug] World State Overview");
-                            console.log("System Prompt:", metadata.debug.system_prompt);
-                            console.log("Memory History Window:", metadata.debug.history_count);
+                            console.group("🤖 [Sphere Debug] LLM Deepseek Interaction");
+                            console.log("Raw Prompt Sequence:", metadata.debug.raw_prompt);
+                            console.log("System Context:", metadata.debug.system_prompt);
+                            console.log("History Window:", metadata.debug.history_count);
                             console.log("L2 Summary Update:", metadata.summary);
+                            console.log("Latency (LLM):", metadata.debug.latency.llm_chat);
+                            console.log("Latency (Total):", metadata.debug.latency.total);
                             console.groupEnd();
                         }
 
