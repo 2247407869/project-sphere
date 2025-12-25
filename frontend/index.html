@@ -130,6 +130,9 @@
             border: 1px solid var(--glass-border);
             padding: 1.5rem;
             overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            touch-action: pan-y;
+            overscroll-behavior: contain;
             color: var(--text-primary);
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8);
         }
