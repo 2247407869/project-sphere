@@ -105,6 +105,68 @@ async def sync_session(req: SessionSyncRequest):
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
+class TodoItem(BaseModel):
+    id: str
+    task: str
+    completed: bool = False
+    created_at: str
+
+@app.get("/todos")
+async def get_todos():
+    """获取所有待办事项"""
+    import json
+    import os
+    todo_file = os.path.join("data", "todos.json")
+    if os.path.exists(todo_file):
+        try:
+            with open(todo_file, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return []
+
+@app.post("/todos/sync")
+async def sync_todos(todos: list[TodoItem]):
+    """同步待办事项库"""
+    import json
+    import os
+    todo_file = os.path.join("data", "todos.json")
+    os.makedirs("data", exist_ok=True)
+    try:
+        with open(todo_file, "w", encoding="utf-8") as f:
+            json.dump([todo.dict() for todo in todos], f, ensure_ascii=False, indent=2)
+        return {"status": "synced"}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+@app.get("/pinned")
+async def get_pinned_facts():
+    """获取永不压缩的核心事实 (L2.5)"""
+    import json
+    import os
+    pinned_file = os.path.join("data", "pinned_facts.json")
+    if os.path.exists(pinned_file):
+        try:
+            with open(pinned_file, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return []
+
+@app.post("/pinned/update")
+async def update_pinned_facts(facts: list[str]):
+    """更新核心事实库"""
+    import json
+    import os
+    pinned_file = os.path.join("data", "pinned_facts.json")
+    os.makedirs("data", exist_ok=True)
+    try:
+        with open(pinned_file, "w", encoding="utf-8") as f:
+            json.dump(facts, f, ensure_ascii=False, indent=2)
+        return {"status": "updated"}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import StreamingResponse, FileResponse
 import json
@@ -139,9 +201,21 @@ async def chat_with_agent(req: ChatRequest):
     logger.info("--- [Stream Chat Session Start] ---")
     
     async def chat_generator():
+        # --- L2.5 Pinned Context 注入 ---
+        pinned_facts = []
+        pinned_file = os.path.join("data", "pinned_facts.json")
+        if os.path.exists(pinned_file):
+            try:
+                with open(pinned_file, "r", encoding="utf-8") as f:
+                    pinned_facts = json.load(f)
+            except: pass
+            
         system_content = "你是一位博学且严谨的技术助手。你的目标是协助用户构建知识库。"
+        if pinned_facts:
+            system_content += "\n\n【核心锁定事实（永不压缩）】:\n" + "\n".join([f"- {f}" for f in pinned_facts])
+            
         if req.summary:
-            system_content += f"\n\n【前情提要（记忆）】：\n{req.summary}"
+            system_content += f"\n\n【前情提要（动态记忆）】：\n{req.summary}"
             
         messages = [SystemMessage(content=system_content)]
         for h in req.history:
@@ -184,11 +258,69 @@ async def chat_with_agent(req: ChatRequest):
                 new_history = new_history[-4:]
                 logger.info(f"New Summary: {new_summary[:50]}...")
 
+            # --- 全局状态感知逻辑 (ToDo + L2.5 Pinned Context) ---
+            pinned_file = os.path.join("data", "pinned_facts.json")
+            todo_file = os.path.join("data", "todos.json")
+            
+            # 读取当前状态
+            current_pinned = []
+            if os.path.exists(pinned_file):
+                try:
+                    with open(pinned_file, "r", encoding="utf-8") as f: current_pinned = json.load(f)
+                except: pass
+            
+            current_todos = []
+            if os.path.exists(todo_file):
+                try:
+                    with open(todo_file, "r", encoding="utf-8") as f: current_todos = json.load(f)
+                except: pass
+
+            world_state_prompt = f"""
+            分析对话，提取并更新用户的【核心锁定事实】及【待办事项】。
+            
+            【锁定事实（永不压缩）】：涉及日程规划、职业战略路线、核心原则等长期不变的信息。
+            当前事实：{json.dumps(current_pinned, ensure_ascii=False)}
+            
+            【待办事项】：具体的任务动作。
+            当前待办：{json.dumps(current_todos, ensure_ascii=False)}
+            
+            对话内容：User: {req.message} -> AI: {full_content}
+            
+            请返回更新后的 JSON 对象：
+            {{
+                "pinned_facts": ["事实1", "事实2", ...],
+                "todos": [{"id": "uuid", "task": "具体事项", "completed": boolean, "created_at": "iso_date"}]
+            }}
+            务必保持数据的完整性，如果没有变化请返回原内容。
+            """
+            try:
+                state_res = await llm.ainvoke([
+                    SystemMessage(content="你是一位知识架构师与任务管理专家。只输出纯 JSON，不含解释。"),
+                    HumanMessage(content=world_state_prompt)
+                ])
+                raw_state = state_res.content.strip()
+                if "```json" in raw_state: raw_state = raw_state.split("```json")[1].split("```")[0].strip()
+                elif "```" in raw_state: raw_state = raw_state.split("```")[1].split("```")[0].strip()
+                
+                state_data = json.loads(raw_state)
+                if "pinned_facts" in state_data:
+                    current_pinned = state_data["pinned_facts"]
+                    with open(pinned_file, "w", encoding="utf-8") as f:
+                        json.dump(current_pinned, f, ensure_ascii=False, indent=2)
+                if "todos" in state_data:
+                    current_todos = state_data["todos"]
+                    with open(todo_file, "w", encoding="utf-8") as f:
+                        json.dump(current_todos, f, ensure_ascii=False, indent=2)
+            except Exception as e:
+                logger.error(f"World State Sync Error: {e}")
+
             # 3. 发送元数据标记位 (用于前端更新状态)
             metadata = {
                 "type": "metadata",
                 "summary": new_summary,
-                "history": new_history
+                "history": new_history,
+                "pinned_facts": current_pinned,
+                "todos": current_todos
             }
             yield f"\n[METADATA]{json.dumps(metadata)}"
             logger.info("--- [Stream Chat Session End] ---")

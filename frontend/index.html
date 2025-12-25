@@ -38,7 +38,7 @@
 
         /* Header */
         header {
-            padding: 1.5rem;
+            padding: 0.6rem;
             background: rgba(13, 13, 18, 0.8);
             backdrop-filter: blur(10px);
             border-bottom: 1px solid var(--glass-border);
@@ -48,7 +48,7 @@
 
         h1 {
             font-family: 'Outfit', sans-serif;
-            font-size: 1.4rem;
+            font-size: 1.1rem;
             background: linear-gradient(135deg, #fff 0%, var(--accent-color) 100%);
             -webkit-background-clip: text;
             background-clip: text;
@@ -105,8 +105,9 @@
             white-space: nowrap;
         }
 
-        /* 事实看板模态框 */
-        #fact-vault {
+        /* 事实看板与待办看板模态框 */
+        #fact-vault,
+        #todo-vault {
             display: none;
             position: fixed;
             top: 10%;
@@ -122,6 +123,32 @@
             overflow-y: auto;
             color: var(--text-primary);
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8);
+        }
+
+        .todo-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            background: rgba(255, 255, 255, 0.03);
+            margin-bottom: 0.8rem;
+            padding: 1rem;
+            border-radius: 16px;
+            transition: opacity 0.3s;
+        }
+
+        .todo-item.completed {
+            opacity: 0.5;
+        }
+
+        .todo-item input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+        .todo-text {
+            flex: 1;
+            font-size: 0.95rem;
         }
 
         .fact-item {
@@ -298,7 +325,20 @@
 
     <div id="memory-bar" onclick="toggleMemoryBar(event)">
         <span><strong>Context:</strong> <span id="memory-content">正在唤醒记忆...</span></span>
-        <button class="vault-btn" onclick="toggleVault(); event.stopPropagation();">事实宝库</button>
+        <div style="display: flex; gap: 5px;">
+            <button class="vault-btn" onclick="toggleTodoVault(); event.stopPropagation();"
+                style="background: rgba(16, 185, 129, 0.2); border-color: #10b981;">待办</button>
+            <button class="vault-btn" onclick="toggleVault(); event.stopPropagation();">事实宝库</button>
+        </div>
+    </div>
+
+    <!-- 待办中心 -->
+    <div id="todo-vault">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+            <h2 style="font-family: 'Outfit';">AI 待办中心</h2>
+            <button class="vault-btn" onclick="toggleTodoVault()">关闭</button>
+        </div>
+        <div id="todo-list">正在同步任务...</div>
     </div>
 
     <!-- 事实看板 -->
@@ -440,7 +480,12 @@
                     } else {
                         aiMsgDiv.innerText = fullContent;
                     }
-                    chatContainer.scrollTop = chatContainer.scrollHeight;
+
+                    // 智能滚动：只有当用户本来就在底部时才自动滚动
+                    const isAtBottom = chatContainer.scrollHeight - chatContainer.scrollTop - chatContainer.clientHeight < 100;
+                    if (isAtBottom) {
+                        chatContainer.scrollTop = chatContainer.scrollHeight;
+                    }
                 }
 
                 // 流结束后的最终处理：解析完整的元数据
@@ -451,7 +496,19 @@
                         const metadata = JSON.parse(parts[1]);
                         history = metadata.history || [];
                         currentSummary = metadata.summary || '';
-                        memoryContent.innerText = currentSummary || "记忆已同步";
+
+                        let displayContent = "";
+                        if (metadata.pinned_facts && metadata.pinned_facts.length > 0) {
+                            displayContent += "📌 [锁定事实]:\n" + metadata.pinned_facts.map(f => `• ${f}`).join('\n') + "\n\n";
+                        }
+                        displayContent += "📝 [动态摘要]:\n" + (currentSummary || "尚无动态摘要");
+
+                        memoryContent.innerText = displayContent;
+
+                        if (metadata.todos) {
+                            todos = metadata.todos;
+                            renderTodos();
+                        }
 
                         // 同步至本地与云端
                         localStorage.setItem('sphere_history', JSON.stringify(history));
@@ -553,6 +610,60 @@
                 `).join('');
             } catch (e) {
                 list.innerHTML = '读取失败：' + e.message;
+            }
+        }
+
+        let todos = [];
+
+        async function toggleTodoVault() {
+            const vault = document.getElementById('todo-vault');
+            if (vault.style.display === 'block') {
+                vault.style.display = 'none';
+                return;
+            }
+            vault.style.display = 'block';
+            await loadTodos();
+        }
+
+        async function loadTodos() {
+            try {
+                const response = await fetch('/todos');
+                todos = await response.json();
+                renderTodos();
+            } catch (e) {
+                document.getElementById('todo-list').innerText = '任务加载失败';
+            }
+        }
+
+        function renderTodos() {
+            const list = document.getElementById('todo-list');
+            if (!todos || todos.length === 0) {
+                list.innerHTML = '<div style="text-align:center; margin-top:50px; opacity:0.5;">暂无待办事项。</div>';
+                return;
+            }
+            list.innerHTML = todos.map(t => `
+                <div class="todo-item ${t.completed ? 'completed' : ''}">
+                    <input type="checkbox" ${t.completed ? 'checked' : ''} onchange="toggleTodoStatus('${t.id}')">
+                    <span class="todo-text">${t.task}</span>
+                </div>
+            `).join('');
+        }
+
+        async function toggleTodoStatus(id) {
+            const todo = todos.find(t => t.id === id);
+            if (todo) {
+                todo.completed = !todo.completed;
+                renderTodos();
+                // 同步至服务器
+                try {
+                    await fetch('/todos/sync', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(todos)
+                    });
+                } catch (e) {
+                    console.error("Todo Sync Failed", e);
+                }
             }
         }
 
