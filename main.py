@@ -289,7 +289,7 @@ async def chat_with_agent(req: ChatRequest):
             请返回更新后的 JSON 对象：
             {{
                 "pinned_facts": ["事实1", "事实2", ...],
-                "todos": [{"id": "uuid", "task": "具体事项", "completed": boolean, "created_at": "iso_date"}]
+                "todos": [{{ "id": "uuid", "task": "具体事项", "completed": false, "created_at": "iso_date" }}]
             }}
             务必保持数据的完整性，如果没有变化请返回原内容。
             """
