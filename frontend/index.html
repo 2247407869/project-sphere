@@ -180,11 +180,16 @@
         #chat-container {
             flex: 1;
             overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            /* 强制 iOS/Chrome 惯性滚动 */
+            overscroll-behavior-y: contain;
+            /* 防止滚动溢出链条干扰 */
             padding: 1.5rem;
             display: flex;
             flex-direction: column;
             gap: 1.5rem;
-            scroll-behavior: smooth;
+            will-change: transform;
+            /* 提示浏览器进行硬件加速 */
         }
 
         .message {
