@@ -84,10 +84,12 @@
         }
 
         #memory-bar.expanded {
-            max-height: 40vh;
+            max-height: 48vh;
             background: rgba(13, 13, 18, 0.98);
             overflow-y: auto;
-            /* 允许父容器滚动 */
+            -webkit-overflow-scrolling: touch;
+            touch-action: pan-y;
+            overscroll-behavior: contain;
         }
 
         #memory-content {
