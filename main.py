@@ -287,17 +287,19 @@ async def chat_with_agent(req: ChatRequest):
             world_state_prompt = f"""
             作为系统架构师，分析对话并更新以下三类信息：
             
-            1. 【锁定事实 (L2.5)】：长期不变的顶层战略、原则（如 06:00 唤醒）。目前值：{json.dumps(current_pinned, ensure_ascii=False)}
-            2. 【待办事项 (ToDo)】：具体的短期动作任务。目前值：{json.dumps(current_todos, ensure_ascii=False)}
-            3. 【新沉淀事实 (L3)】：提取本次对话中产生的有价值的新事实、技术决策或用户偏好。
+            1. 【锁定事实 (L2.5)】：长期不变的顶层战略、原则。目前值：{json.dumps(current_pinned, ensure_ascii=False)}
+            2. 【待办事项 (ToDo)】：具体的短期动作任务。必须包含 id, task, completed, created_at。目前值：{json.dumps(current_todos, ensure_ascii=False)}
+            3. 【新沉淀事实 (L3)】：提取本次对话中产生的有价值的新事实、技术决策或用户偏好。只提取真正有持久价值的信息。
             
             对话：User: {req.message} -> AI: {full_content}
             
-            请返回更新后的 JSON。如果是新增待办，请根据语义自动创建。
+            请返回更新后的 JSON。如果是新增待办，请根据语义自动创建并分配 UUID。
             {{
-                "pinned_facts": [...],
-                "todos": [...],
-                "new_l3_facts": ["事实1", "事实2"]
+                "pinned_facts": ["事实描述", ...],
+                "todos": [
+                    {{ "id": "uuid", "task": "任务内容", "completed": false, "created_at": "ISO时间" }}
+                ],
+                "new_l3_facts": ["新事实1", "新事实2"]
             }}
             只输出 JSON，不含解释。如果没有新 L3 事实，请返回空数组。
             """

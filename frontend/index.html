@@ -621,21 +621,28 @@
             list.innerHTML = '正在读取事实云...';
 
             try {
+                console.log("Fetching facts from /facts ...");
                 const response = await fetch('/facts');
+                console.log("Facts Response Status:", response.status);
                 const facts = await response.json();
+                console.log("Facts Data:", facts);
 
                 if (facts.length === 0) {
                     list.innerHTML = '<div style="text-align:center; margin-top:50px; opacity:0.5;">宝库尚空，完成 Capture 以归档事实。</div>';
                     return;
                 }
 
-                list.innerHTML = facts.reverse().map(f => `
-                    <div class="fact-item">
-                        <div class="fact-time">${new Date(f.timestamp).toLocaleString()}</div>
-                        <div class="fact-summary">${f.summary}</div>
-                        <div class="fact-origin">"${f.content.substring(0, 100)}${f.content.length > 100 ? '...' : ''}"</div>
-                    </div>
-                `).join('');
+                list.innerHTML = facts.reverse().map(f => {
+                    const contentStr = f.content || '';
+                    const displayOrigin = contentStr ? `"${contentStr.substring(0, 100)}${contentStr.length > 100 ? '...' : ''}"` : '<em>(自动沉淀事实)</em>';
+                    return `
+                        <div class="fact-item">
+                            <div class="fact-time">${new Date(f.timestamp).toLocaleString()}</div>
+                            <div class="fact-summary">${f.summary || '无摘要'}</div>
+                            <div class="fact-origin">${displayOrigin}</div>
+                        </div>
+                    `;
+                }).join('');
             } catch (e) {
                 list.innerHTML = '读取失败：' + e.message;
             }
@@ -655,8 +662,11 @@
 
         async function loadTodos() {
             try {
+                console.log("Fetching todos from /todos ...");
                 const response = await fetch('/todos');
+                console.log("Todos Response Status:", response.status);
                 todos = await response.json();
+                console.log("Todos Data:", todos);
                 renderTodos();
             } catch (e) {
                 document.getElementById('todo-list').innerText = '任务加载失败';
@@ -669,12 +679,15 @@
                 list.innerHTML = '<div style="text-align:center; margin-top:50px; opacity:0.5;">暂无待办事项。</div>';
                 return;
             }
-            list.innerHTML = todos.map(t => `
-                <div class="todo-item ${t.completed ? 'completed' : ''}">
-                    <input type="checkbox" ${t.completed ? 'checked' : ''} onchange="toggleTodoStatus('${t.id}')">
-                    <span class="todo-text">${t.task}</span>
-                </div>
-            `).join('');
+            list.innerHTML = todos.map(t => {
+                const taskText = t.task || (typeof t === 'string' ? t : '未知任务');
+                return `
+                    <div class="todo-item ${t.completed ? 'completed' : ''}">
+                        <input type="checkbox" ${t.completed ? 'checked' : ''} onchange="toggleTodoStatus('${t.id || 'temp'}')">
+                        <span class="todo-text">${taskText}</span>
+                    </div>
+                `;
+            }).join('');
         }
 
         async function toggleTodoStatus(id) {
