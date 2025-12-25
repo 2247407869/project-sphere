@@ -1,4 +1,4 @@
-# 主程序入口：负责 Web 应用的启动与 API 路由调度
+# 主程序入口：负责 Web 应用的启动与 API 路由调度 (Debug Mode V2)
 from fastapi import FastAPI
 from src.utils.config import settings
 from src.agents.knowledge_agent import knowledge_graph
