@@ -262,12 +262,7 @@ async def chat_with_agent(req: ChatRequest):
         except Exception as de:
             logger.error(f"Failed to write debug_prompt.txt: {de}")
 
-        sys.stderr.write("\n" + "!"*10 + " DEEPSEEK RAW PROMPT START " + "!"*10 + "\n")
-        for i, m in enumerate(messages):
-            role = "SYSTEM" if isinstance(m, SystemMessage) else "USER" if isinstance(m, HumanMessage) else "ASSISTANT"
-            # 完整打印，且不压缩换行，方便李林松直接在这里看报文
-            sys.stderr.write(f"[{i}] {role} content:\n{m.content}\n")
-        sys.stderr.write("!"*10 + " DEEPSEEK RAW PROMPT END " + "!"*10 + "\n")
+        sys.stderr.write(f"\n[{datetime.now().strftime('%H:%M:%S')}] 📝 Raw prompt has been synced to 'debug_prompt.txt'\n")
         sys.stderr.flush()
         
         full_content = ""
@@ -383,28 +378,33 @@ async def chat_with_agent(req: ChatRequest):
                 logger.error(f"World State Refresh Error: {e}")
 
             # 3. 发送元数据标记位
-            end_time = time.time()
-            metadata = {
-                "type": "metadata",
-                "summary": new_summary,
-                "history": new_history,
-                "pinned_facts": current_pinned,
-                "todos": current_todos,
-                "debug": {
-                    "raw_prompt": [
-                        {"role": "system" if isinstance(m, SystemMessage) else "user" if isinstance(m, HumanMessage) else "assistant", "content": m.content} 
-                        for m in messages
-                    ],
-                    "latency": {
-                        "llm_chat": f"{chat_done_time - start_time:.2f}s",
-                        "total": f"{end_time - start_time:.2f}s"
-                    },
-                    "system_prompt": system_content,
-                    "history_count": len(req.history)
+            try:
+                end_time = time.time()
+                metadata = {
+                    "type": "metadata",
+                    "summary": new_summary,
+                    "history": new_history,
+                    "pinned_facts": current_pinned,
+                    "todos": current_todos,
+                    "debug": {
+                        "raw_prompt": [
+                            {"role": "system" if isinstance(m, SystemMessage) else "user" if isinstance(m, HumanMessage) else "assistant", "content": m.content} 
+                            for m in messages
+                        ],
+                        "latency": {
+                            "llm_chat": f"{chat_done_time - start_time:.2f}s",
+                            "total": f"{end_time - start_time:.2f}s"
+                        },
+                        "system_prompt": system_content,
+                        "history_count": len(req.history)
+                    }
                 }
-            }
-            yield f"\n[METADATA]{json.dumps(metadata)}"
-            logger.info(f"--- [Stream Chat End] Total Latency: {end_time - start_time:.2f}s ---")
+                meta_json = json.dumps(metadata, ensure_ascii=False)
+                yield f"\n[METADATA]{meta_json}"
+                logger.info(f"--- [Stream Chat End] Total Latency: {end_time - start_time:.2f}s ---")
+            except Exception as me:
+                logger.error(f"Metadata generation failed: {me}")
+                yield f"\n[METADATA]{{\"error\": \"metadata_failed\"}}"
 
         except Exception as e:
             logger.error(f"Streaming failed: {e}", exc_info=True)
