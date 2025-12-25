@@ -432,7 +432,10 @@
                 // 核心逻辑：如果云端有更长/更新的历史，则同步云端
                 if (data.history && data.history.length >= history.length) {
                     history = data.history;
-                    currentSummary = data.summary || '';
+                    // 只有当云端摘要非空时才覆盖本地，防止重启导致的瞬间丢失
+                    if (data.summary) {
+                        currentSummary = data.summary;
+                    }
                     await renderHistory();
                     localStorage.setItem('sphere_history', JSON.stringify(history));
                     localStorage.setItem('sphere_summary', currentSummary);

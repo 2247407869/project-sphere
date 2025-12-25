@@ -12,6 +12,7 @@ data/
 !data/pinned_facts.json
 !data/todos.json
 !data/facts.json
+!data/sessions.json
 captured_insights/
 .ipynb_checkpoints/
 

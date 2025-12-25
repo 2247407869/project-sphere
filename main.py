@@ -251,8 +251,12 @@ async def chat_with_agent(req: ChatRequest):
             new_summary = req.summary
             new_history = req.history + [{"role": "user", "content": req.message}, {"role": "ai", "content": full_content}]
             
-            if len(new_history) >= 12: 
-                logger.info("!! [TMA Triggered] Detection of long context, initiating L2 compression...")
+            # 触发条件：历史过长(>12) OR (历史积累到一定程度(>3) 且 摘要尚为空)
+            should_compress = len(new_history) >= 12
+            is_initial_summary = (len(new_history) >= 6 and not req.summary) # 6条消息即3轮对话
+            
+            if should_compress or is_initial_summary: 
+                logger.info(f"!! [TMA Triggered] Reason: {'Long Context' if should_compress else 'Initial Summary'}")
                 compress_prompt = f"""
                 基于以下【前情提要】和【新增对话】，生成一个内容丰满且结构化的新摘要（300字以内）。
                 要求：
