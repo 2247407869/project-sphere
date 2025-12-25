@@ -15,10 +15,13 @@ if (!(Get-Command python -ErrorAction SilentlyContinue)) {
 }
 
 # 启动服务端
-if (Test-Path ".\venv\Scripts\python.exe") {
-    Write-Host "✅ 检测到本地虚拟环境，正在启动..." -ForegroundColor Gray
-    .\venv\Scripts\python.exe -m uvicorn main:app --host 127.0.0.1 --port 8000 --reload
+$venvPath = Join-Path $PSScriptRoot "venv\Scripts\python.exe"
+
+if (Test-Path $venvPath) {
+    Write-Host "✅ 定位到虚拟环境: $venvPath" -ForegroundColor Gray
+    & $venvPath -m uvicorn main:app --host 127.0.0.1 --port 8000 --reload
 }
 else {
+    Write-Warning "未找到虚拟环境，将尝试使用系统 Python..."
     python -m uvicorn main:app --host 127.0.0.1 --port 8000 --reload
 }
