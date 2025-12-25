@@ -15,4 +15,10 @@ if (!(Get-Command python -ErrorAction SilentlyContinue)) {
 }
 
 # 启动服务端
-python -m uvicorn main:app --host 127.0.0.1 --port 8000 --reload
+if (Test-Path ".\venv\Scripts\python.exe") {
+    Write-Host "✅ 检测到本地虚拟环境，正在启动..." -ForegroundColor Gray
+    .\venv\Scripts\python.exe -m uvicorn main:app --host 127.0.0.1 --port 8000 --reload
+}
+else {
+    python -m uvicorn main:app --host 127.0.0.1 --port 8000 --reload
+}
