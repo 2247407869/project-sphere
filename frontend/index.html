@@ -26,14 +26,21 @@
             -webkit-tap-highlight-color: transparent;
         }
 
+        html,
+        body {
+            height: 100%;
+            height: -webkit-fill-available;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+
         body {
             font-family: 'Inter', sans-serif;
             background-color: var(--bg-color);
             color: var(--text-primary);
-            height: 100%;
             display: flex;
             flex-direction: column;
-            overflow: hidden;
         }
 
         /* Header */
@@ -179,17 +186,15 @@
 
         #chat-container {
             flex: 1;
+            min-height: 0;
             overflow-y: auto;
+            overflow-x: hidden;
             -webkit-overflow-scrolling: touch;
-            /* 强制 iOS/Chrome 惯性滚动 */
-            overscroll-behavior-y: contain;
-            /* 防止滚动溢出链条干扰 */
+            touch-action: pan-y;
             padding: 1.5rem;
             display: flex;
             flex-direction: column;
             gap: 1.5rem;
-            will-change: transform;
-            /* 提示浏览器进行硬件加速 */
         }
 
         .message {
@@ -199,7 +204,7 @@
             font-size: 0.95rem;
             line-height: 1.5;
             position: relative;
-            animation: slideIn 0.3s ease-out;
+            /* animation: slideIn 0.3s ease-out; 临时禁用以优化移动端滑动 */
         }
 
         @keyframes slideIn {
