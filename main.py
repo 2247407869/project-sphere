@@ -13,11 +13,14 @@ from src.agents.knowledge_agent import llm
 from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
 
 # 初始化配置与日志系统
+import sys
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[logging.StreamHandler(sys.stdout)]
 )
 logger = logging.getLogger("Sphere-Core")
+logger.propagate = True # 确保日志可以上传
 from pydantic import BaseModel
 
 app = FastAPI(title=settings.PROJECT_NAME)
@@ -201,13 +204,22 @@ async def chat_with_agent(req: ChatRequest):
     2. 使用 StreamingResponse 实现打字机效果
     3. 在流结束时回传 metadata (summary & history)
     """
-    import time
+    import sys, time
     from datetime import datetime
     start_time = time.time()
+    # 强制在函数入口打桩，不依赖 generator 开始执行
+    entry_msg = f"\n[{datetime.now().strftime('%H:%M:%S')}] 🚀 [BACKEND HIT] /chat endpoint reached.\n"
+    sys.stderr.write(entry_msg)
+    sys.stderr.flush()
     
     logger.info("--- [Stream Chat Session Start] ---")
     
     async def chat_generator():
+        import sys
+        banner = f"\n{'='*30}\n🟢 NEW STREAMING REQUEST AT {datetime.now().strftime('%H:%M:%S.%f')[:-3]}\n{'='*30}\n"
+        sys.stderr.write(banner)
+        sys.stderr.write(f"RAW USER TEXT: {req.message}\n")
+        sys.stderr.flush()
         # --- L2.5 Pinned Context 注入 ---
         pinned_facts = []
         pinned_file = os.path.join("data", "pinned_facts.json")
@@ -238,13 +250,26 @@ async def chat_with_agent(req: ChatRequest):
         # 补上当前最后一条用户的提问
         messages.append(HumanMessage(content=req.message))
 
-        # --- 核心调试日志：打印发送给 Deepseek 的原始文本序列 ---
-        logger.info("========== [DEEPSEEK RAW PROMPT START] ==========")
-        for i, m in enumerate(messages):
-            role_map = {SystemMessage: "SYSTEM", HumanMessage: "USER", AIMessage: "ASSISTANT"}
-            logger.info(f"[{i}] {role_map.get(type(m), 'UNKNOWN')}: {m.content[:500]}...") # 限制单条打印长度防止刷屏
-        logger.info("========== [DEEPSEEK RAW PROMPT END] ==========")
+        # --- 核心调试日志：同步写入 debug_prompt.txt (最高优先级备份) ---
+        try:
+            debug_info = f"\n{'='*50}\nTIMESTAMP: {datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')}\n"
+            for i, m in enumerate(messages):
+                role = "SYSTEM" if isinstance(m, SystemMessage) else "USER" if isinstance(m, HumanMessage) else "ASSISTANT"
+                debug_info += f"\n[{i}] {role}:\n{m.content}\n"
+            debug_info += f"{'='*50}\n"
+            with open("debug_prompt.txt", "w", encoding="utf-8") as df:
+                df.write(debug_info)
+        except Exception as de:
+            logger.error(f"Failed to write debug_prompt.txt: {de}")
 
+        sys.stderr.write("\n" + "!"*10 + " DEEPSEEK RAW PROMPT START " + "!"*10 + "\n")
+        for i, m in enumerate(messages):
+            role = "SYSTEM" if isinstance(m, SystemMessage) else "USER" if isinstance(m, HumanMessage) else "ASSISTANT"
+            # 完整打印，且不压缩换行，方便李林松直接在这里看报文
+            sys.stderr.write(f"[{i}] {role} content:\n{m.content}\n")
+        sys.stderr.write("!"*10 + " DEEPSEEK RAW PROMPT END " + "!"*10 + "\n")
+        sys.stderr.flush()
+        
         full_content = ""
         try:
             # 1. 开启 LLM 异步流
