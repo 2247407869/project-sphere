@@ -5,6 +5,12 @@ from src.agents.knowledge_agent import knowledge_graph
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 import logging
+import json
+import os
+import time
+from datetime import datetime
+from src.agents.knowledge_agent import llm
+from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
 
 # 初始化配置与日志系统
 logging.basicConfig(
@@ -195,8 +201,9 @@ async def chat_with_agent(req: ChatRequest):
     2. 使用 StreamingResponse 实现打字机效果
     3. 在流结束时回传 metadata (summary & history)
     """
-    from src.agents.knowledge_agent import llm
-    from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
+    import time
+    from datetime import datetime
+    start_time = time.time()
     
     logger.info("--- [Stream Chat Session Start] ---")
     
@@ -233,6 +240,9 @@ async def chat_with_agent(req: ChatRequest):
                 token = chunk.content
                 full_content += token
                 yield token
+            
+            chat_done_time = time.time()
+            logger.info(f"LLM First Response Latency: {chat_done_time - start_time:.2f}s")
 
             # 2. 对话结束后，处理记忆逻辑 (L2 压缩)
             new_summary = req.summary
@@ -330,6 +340,7 @@ async def chat_with_agent(req: ChatRequest):
                 logger.error(f"World State Refresh Error: {e}")
 
             # 3. 发送元数据标记位
+            end_time = time.time()
             metadata = {
                 "type": "metadata",
                 "summary": new_summary,
@@ -337,12 +348,16 @@ async def chat_with_agent(req: ChatRequest):
                 "pinned_facts": current_pinned,
                 "todos": current_todos,
                 "debug": {
+                    "latency": {
+                        "total": f"{end_time - start_time:.2f}s",
+                        "llm_chat": f"{chat_done_time - start_time:.2f}s"
+                    },
                     "system_prompt": system_content,
                     "history_count": len(req.history)
                 }
             }
             yield f"\n[METADATA]{json.dumps(metadata)}"
-            logger.info("--- [Stream Chat Session End] ---")
+            logger.info(f"--- [Stream Chat End] Total Latency: {end_time - start_time:.2f}s ---")
 
         except Exception as e:
             logger.error(f"Streaming failed: {e}", exc_info=True)
