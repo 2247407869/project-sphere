@@ -214,9 +214,10 @@ async def chat_with_agent(req: ChatRequest):
         if pinned_facts:
             system_content += "\n\n【核心锁定事实（永不压缩）】:\n" + "\n".join([f"- {f}" for f in pinned_facts])
             
-        if req.summary:
-            system_content += f"\n\n【前情提要（动态记忆）】：\n{req.summary}"
-            
+        # --- 日志追踪：暴露给李林松看的上下文 ---
+        logger.info(f">>> [System Prompt Context]:\n{system_content}")
+        logger.info(f">>> [Chat History Window]: {len(req.history)} messages")
+
         messages = [SystemMessage(content=system_content)]
         for h in req.history:
             if h["role"] == "user":
@@ -237,32 +238,30 @@ async def chat_with_agent(req: ChatRequest):
             new_summary = req.summary
             new_history = req.history + [{"role": "user", "content": req.message}, {"role": "ai", "content": full_content}]
             
-            if len(new_history) >= 12: # 稍微提高阈值以减少压缩频率
+            if len(new_history) >= 12: 
                 logger.info("!! [TMA Triggered] Detection of long context, initiating L2 compression...")
                 compress_prompt = f"""
                 基于以下【前情提要】和【新增对话】，生成一个内容丰满且结构化的新摘要（300字以内）。
                 要求：
                 1. 采用无序列表形式。
-                2. 必须保留关键的技术参数、核心架构决策、用户显式提及的重要偏好。
-                3. 保留当前未完成的待办任务。
+                2. 必须保留关键的技术参数、核心架构决策、用户显式提及的重要偏步。
+                3. 【重要】不再需要包含待办事项，待办事项将由独立模块管理。
                 
                 原提要：{req.summary}
                 新增内容：{new_history[-1]["content"]} 
                 """
-                # 注意：摘要生成升级为异步 ainvoke 以保证非阻塞
                 summary_response = await llm.ainvoke([
                     SystemMessage(content="你是一位记忆管理专家。你只输出极致压缩后的事实总结，不含废话。"),
                     HumanMessage(content=compress_prompt)
                 ])
                 new_summary = summary_response.content
                 new_history = new_history[-4:]
-                logger.info(f"New Summary: {new_summary[:50]}...")
 
-            # --- 全局状态感知逻辑 (ToDo + L2.5 Pinned Context) ---
+            # --- 全局状态感知逻辑 (ToDo + L2.5 Pinned + L3 Auto Facts) ---
             pinned_file = os.path.join("data", "pinned_facts.json")
             todo_file = os.path.join("data", "todos.json")
+            l3_fact_file = os.path.join("data", "facts.json")
             
-            # 读取当前状态
             current_pinned = []
             if os.path.exists(pinned_file):
                 try:
@@ -276,26 +275,25 @@ async def chat_with_agent(req: ChatRequest):
                 except: pass
 
             world_state_prompt = f"""
-            分析对话，提取并更新用户的【核心锁定事实】及【待办事项】。
+            作为系统架构师，分析对话并更新以下三类信息：
             
-            【锁定事实（永不压缩）】：涉及日程规划、职业战略路线、核心原则等长期不变的信息。
-            当前事实：{json.dumps(current_pinned, ensure_ascii=False)}
+            1. 【锁定事实 (L2.5)】：长期不变的顶层战略、原则（如 06:00 唤醒）。目前值：{json.dumps(current_pinned, ensure_ascii=False)}
+            2. 【待办事项 (ToDo)】：具体的短期动作任务。目前值：{json.dumps(current_todos, ensure_ascii=False)}
+            3. 【新沉淀事实 (L3)】：提取本次对话中产生的有价值的新事实、技术决策或用户偏好。
             
-            【待办事项】：具体的任务动作。
-            当前待办：{json.dumps(current_todos, ensure_ascii=False)}
+            对话：User: {req.message} -> AI: {full_content}
             
-            对话内容：User: {req.message} -> AI: {full_content}
-            
-            请返回更新后的 JSON 对象：
+            请返回更新后的 JSON。如果是新增待办，请根据语义自动创建。
             {{
-                "pinned_facts": ["事实1", "事实2", ...],
-                "todos": [{{ "id": "uuid", "task": "具体事项", "completed": false, "created_at": "iso_date" }}]
+                "pinned_facts": [...],
+                "todos": [...],
+                "new_l3_facts": ["事实1", "事实2"]
             }}
-            务必保持数据的完整性，如果没有变化请返回原内容。
+            只输出 JSON，不含解释。如果没有新 L3 事实，请返回空数组。
             """
             try:
                 state_res = await llm.ainvoke([
-                    SystemMessage(content="你是一位知识架构师与任务管理专家。只输出纯 JSON，不含解释。"),
+                    SystemMessage(content="你是一位高效的状态管理器。只输出纯 JSON。"),
                     HumanMessage(content=world_state_prompt)
                 ])
                 raw_state = state_res.content.strip()
@@ -303,24 +301,45 @@ async def chat_with_agent(req: ChatRequest):
                 elif "```" in raw_state: raw_state = raw_state.split("```")[1].split("```")[0].strip()
                 
                 state_data = json.loads(raw_state)
+                # 分发更新
                 if "pinned_facts" in state_data:
                     current_pinned = state_data["pinned_facts"]
-                    with open(pinned_file, "w", encoding="utf-8") as f:
-                        json.dump(current_pinned, f, ensure_ascii=False, indent=2)
+                    with open(pinned_file, "w", encoding="utf-8") as f: json.dump(current_pinned, f, ensure_ascii=False, indent=2)
+                
                 if "todos" in state_data:
                     current_todos = state_data["todos"]
-                    with open(todo_file, "w", encoding="utf-8") as f:
-                        json.dump(current_todos, f, ensure_ascii=False, indent=2)
-            except Exception as e:
-                logger.error(f"World State Sync Error: {e}")
+                    with open(todo_file, "w", encoding="utf-8") as f: json.dump(current_todos, f, ensure_ascii=False, indent=2)
+                
+                # 自动沉淀 L3 事实
+                if state_data.get("new_l3_facts"):
+                    l3_facts = []
+                    if os.path.exists(l3_fact_file):
+                        try:
+                            with open(l3_fact_file, "r", encoding="utf-8") as f: l3_facts = json.load(f)
+                        except: pass
+                    
+                    for f in state_data["new_l3_facts"]:
+                        l3_facts.append({
+                            "summary": f,
+                            "timestamp": datetime.now().isoformat(),
+                            "source": "Auto-Extracted"
+                        })
+                    with open(l3_fact_file, "w", encoding="utf-8") as f: json.dump(l3_facts, f, ensure_ascii=False, indent=2)
 
-            # 3. 发送元数据标记位 (用于前端更新状态)
+            except Exception as e:
+                logger.error(f"World State Refresh Error: {e}")
+
+            # 3. 发送元数据标记位
             metadata = {
                 "type": "metadata",
                 "summary": new_summary,
                 "history": new_history,
                 "pinned_facts": current_pinned,
-                "todos": current_todos
+                "todos": current_todos,
+                "debug": {
+                    "system_prompt": system_content,
+                    "history_count": len(req.history)
+                }
             }
             yield f"\n[METADATA]{json.dumps(metadata)}"
             logger.info("--- [Stream Chat Session End] ---")
