@@ -3,9 +3,7 @@ title: Project Sphere - AI Memory Assistant
 emoji: 🧠
 colorFrom: blue
 colorTo: purple
-sdk: gradio
-sdk_version: 4.32.0
-app_file: app.py
+sdk: docker
 pinned: false
 license: mit
 short_description: 具有三层记忆架构的AI助手
