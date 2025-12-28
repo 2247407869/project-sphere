@@ -9,6 +9,7 @@ ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 ENV ENV=production
 ENV DEBUG=false
+ENV VERSION=2.0
 
 # 安装系统依赖
 RUN apt-get update && apt-get install -y --no-install-recommends \
