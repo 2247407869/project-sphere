@@ -1,9 +1,13 @@
-# Hugging Face Spaces 专用入口
+# Hugging Face Spaces 专用入口 - Gradio 包装器
+import gradio as gr
+import threading
+import time
 import uvicorn
 import os
 import logging
 import sys
 from pathlib import Path
+import requests
 
 # 添加项目根目录到Python路径
 project_root = Path(__file__).parent
@@ -37,30 +41,122 @@ def pre_startup_check():
 # 执行启动前检查
 pre_startup_check()
 
-# 导入主应用
-try:
-    from main import app
-    logger.info("✅ 主应用模块加载成功")
-except Exception as e:
-    logger.error(f"❌ 主应用模块加载失败: {e}")
-    raise
+# 全局变量存储 FastAPI 应用
+fastapi_app = None
+server_thread = None
+
+def start_fastapi_server():
+    """在后台启动 FastAPI 服务器"""
+    global fastapi_app
+    try:
+        from main import app as main_app
+        fastapi_app = main_app
+        logger.info("✅ FastAPI 应用加载成功")
+        
+        uvicorn.run(
+            fastapi_app,
+            host="127.0.0.1",
+            port=8000,
+            log_level="warning"  # 减少日志输出
+        )
+    except Exception as e:
+        logger.error(f"❌ FastAPI 服务器启动失败: {e}")
+
+def wait_for_server():
+    """等待服务器启动"""
+    max_attempts = 30
+    for i in range(max_attempts):
+        try:
+            response = requests.get("http://127.0.0.1:8000/health", timeout=1)
+            if response.status_code == 200:
+                logger.info("✅ FastAPI 服务器已就绪")
+                return True
+        except:
+            pass
+        time.sleep(1)
+    logger.warning("⚠️ FastAPI 服务器启动超时")
+    return False
+
+def create_gradio_interface():
+    """创建 Gradio 界面"""
+    
+    # 启动 FastAPI 服务器
+    global server_thread
+    server_thread = threading.Thread(target=start_fastapi_server, daemon=True)
+    server_thread.start()
+    
+    # 等待服务器启动
+    wait_for_server()
+    
+    # 创建 HTML 内容
+    html_content = """
+    <div style="width: 100%; height: 800px;">
+        <iframe 
+            src="http://127.0.0.1:8000/" 
+            width="100%" 
+            height="800px" 
+            frameborder="0"
+            style="border: 1px solid #ddd; border-radius: 8px;">
+        </iframe>
+    </div>
+    <script>
+    // 定期检查 iframe 是否加载成功
+    setInterval(function() {
+        const iframe = document.querySelector('iframe');
+        if (iframe && !iframe.contentDocument) {
+            iframe.src = iframe.src; // 重新加载
+        }
+    }, 5000);
+    </script>
+    """
+    
+    return gr.HTML(html_content)
+
+# 创建 Gradio 应用
+with gr.Blocks(
+    title="Project Sphere - AI Memory Assistant",
+    theme=gr.themes.Soft(),
+    css="""
+    .gradio-container {
+        max-width: 100% !important;
+        padding: 0 !important;
+    }
+    """
+) as demo:
+    gr.Markdown("# 🧠 Project Sphere - AI Memory Assistant")
+    gr.Markdown("一个具有三层记忆架构的AI助手")
+    
+    # 添加 iframe
+    create_gradio_interface()
+    
+    gr.Markdown("""
+    ### 使用说明
+    1. 在上方的聊天界面中开始对话
+    2. 告诉AI你的个人信息，它会自动记住
+    3. 访问 `/debug` 页面查看记忆状态
+    4. 支持自动归档和长期记忆管理
+    
+    **注意**: 这是演示版本，请不要输入敏感信息。
+    """)
 
 if __name__ == "__main__":
-    # Hugging Face Spaces 默认监听端口为 7860 或环境变量 PORT
-    port = int(os.environ.get("PORT", 7860))
-    host = os.environ.get("HOST", "0.0.0.0")
+    # 设置环境变量
+    os.environ.setdefault("ENV", "production")
+    os.environ.setdefault("DEBUG", "false")
     
-    logger.info(f"🚀 Project Sphere 正在启动...")
-    logger.info(f"📡 监听地址: {host}:{port}")
-    logger.info(f"🌍 环境: {os.environ.get('ENV', 'production')}")
+    # Hugging Face Spaces 默认监听端口为 7860
+    port = int(os.environ.get("PORT", 7860))
+    
+    logger.info(f"🚀 Project Sphere 正在启动 (Gradio 模式)...")
+    logger.info(f"📡 监听端口: {port}")
     
     try:
-        uvicorn.run(
-            "app:app", 
-            host=host, 
-            port=port, 
-            reload=False,
-            log_level="info"
+        demo.launch(
+            server_name="0.0.0.0",
+            server_port=port,
+            share=False,
+            show_error=True,
+            quiet=False
         )
     except Exception as e:
         logger.error(f"❌ 应用启动失败: {e}")
