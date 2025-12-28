@@ -244,6 +244,13 @@
         .typing.show {
             display: block !important;
         }
+
+        /* Debug Button */
+        #debug-toggle:hover {
+            background: var(--accent-color) !important;
+            color: white !important;
+            transform: translateY(-1px);
+        }
     </style>
 </head>
 
@@ -253,8 +260,8 @@
         <div style="display: flex; justify-content: space-between; align-items: center;">
             <div></div>
             <h1>Project Sphere</h1>
-            <button id="debug-toggle" style="background: none; border: 1px solid var(--glass-border); color: var(--text-secondary); padding: 0.3rem 0.6rem; border-radius: 8px; font-size: 0.7rem; cursor: pointer;">
-                Debug
+            <button id="debug-toggle" style="background: rgba(255,255,255,0.1); border: 1px solid var(--accent-color); color: var(--accent-color); padding: 0.4rem 0.8rem; border-radius: 8px; font-size: 0.75rem; cursor: pointer; transition: all 0.3s ease;">
+                🔧 Debug
             </button>
         </div>
     </header>
