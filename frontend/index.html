@@ -5,9 +5,27 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Project Sphere | Dialogue</title>
+    <!-- 强制禁用缓存 -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Outfit:wght@300;600&display=swap"
         rel="stylesheet">
     <style>
+        /* VERSION WATERMARK */
+        #version-tag {
+            position: fixed;
+            top: 0;
+            right: 0;
+            background: #00ff00;
+            color: black;
+            padding: 5px 10px;
+            z-index: 9999;
+            font-weight: bold;
+            font-size: 12px;
+            pointer-events: none;
+        }
+
         :root {
             --bg-color: #0d0d12;
             --card-bg: rgba(255, 255, 255, 0.03);
@@ -62,7 +80,6 @@
             -webkit-text-fill-color: transparent;
         }
 
-        /* Chat Area */
         /* Memory Bar */
         #memory-bar {
             background: rgba(255, 255, 255, 0.03);
@@ -77,19 +94,18 @@
             justify-content: space-between;
             gap: 0.5rem;
             max-height: 48px;
-            /* 默认紧凑高度 */
             transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             overflow: hidden;
             cursor: pointer;
         }
 
         #memory-bar.expanded {
-            max-height: 48vh;
-            background: rgba(13, 13, 18, 0.98);
+            max-height: 300px;
             overflow-y: auto;
-            -webkit-overflow-scrolling: touch;
-            touch-action: pan-y;
-            overscroll-behavior: contain;
+        }
+
+        #memory-bar:hover {
+            background: rgba(255, 255, 255, 0.05);
         }
 
         #memory-content {
@@ -99,96 +115,24 @@
             opacity: 0.8;
         }
 
-        #memory-bar.expanded #memory-content {
-            opacity: 1;
+        .session-actions {
+            display: flex;
+            gap: 0.5rem;
+            flex-shrink: 0;
         }
 
-        .vault-btn {
-            background: rgba(99, 102, 241, 0.2);
-            border: 1px solid var(--accent-color);
-            color: white;
-            padding: 2px 8px;
+        .session-btn {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid var(--glass-border);
+            color: var(--text-secondary);
+            padding: 4px 10px;
             border-radius: 12px;
             font-size: 0.7rem;
             cursor: pointer;
-            white-space: nowrap;
+            transition: all 0.2s;
         }
 
-        /* 事实看板与待办看板模态框 */
-        #fact-vault,
-        #todo-vault {
-            display: none;
-            position: fixed;
-            top: 10%;
-            left: 5%;
-            width: 90%;
-            height: 80%;
-            background: rgba(13, 13, 18, 0.98);
-            backdrop-filter: blur(25px);
-            z-index: 2000;
-            border-radius: 24px;
-            border: 1px solid var(--glass-border);
-            padding: 1.5rem;
-            overflow-y: auto;
-            -webkit-overflow-scrolling: touch;
-            touch-action: pan-y;
-            overscroll-behavior: contain;
-            color: var(--text-primary);
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8);
-        }
-
-        .todo-item {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            background: rgba(255, 255, 255, 0.03);
-            margin-bottom: 0.8rem;
-            padding: 1rem;
-            border-radius: 16px;
-            transition: opacity 0.3s;
-        }
-
-        .todo-item.completed {
-            opacity: 0.5;
-        }
-
-        .todo-item input[type="checkbox"] {
-            width: 20px;
-            height: 20px;
-            cursor: pointer;
-        }
-
-        .todo-text {
-            flex: 1;
-            font-size: 0.95rem;
-        }
-
-        .fact-item {
-            background: rgba(255, 255, 255, 0.03);
-            margin-bottom: 1rem;
-            padding: 1rem;
-            border-radius: 16px;
-            border-left: 3px solid var(--accent-color);
-        }
-
-        .fact-time {
-            font-size: 0.7rem;
-            color: var(--text-secondary);
-            margin-bottom: 0.3rem;
-        }
-
-        .fact-summary {
-            font-weight: 600;
-            margin-bottom: 0.5rem;
-            color: var(--accent-color);
-        }
-
-        .fact-origin {
-            font-size: 0.85rem;
-            opacity: 0.8;
-            line-height: 1.4;
-        }
-
+        /* Chat Area */
         #chat-container {
             flex: 1;
             min-height: 0;
@@ -209,19 +153,6 @@
             font-size: 0.95rem;
             line-height: 1.5;
             position: relative;
-            /* animation: slideIn 0.3s ease-out; 临时禁用以优化移动端滑动 */
-        }
-
-        @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateY(10px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
         }
 
         .user-message {
@@ -302,79 +233,42 @@
             align-items: center;
         }
 
-        .capture-btn {
-            background: transparent;
-            border: 1px solid var(--accent-color);
-            color: var(--accent-color);
-            padding: 0.4rem 1rem;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            font-weight: 600;
-            cursor: pointer;
-        }
-
         /* Loading */
         .typing {
             font-size: 0.8rem;
             color: var(--text-secondary);
             margin-left: 0.5rem;
-            display: none;
+            display: none !important;
         }
 
-        /* Scrollbar */
-        #chat-container::-webkit-scrollbar {
-            width: 4px;
-        }
-
-        #chat-container::-webkit-scrollbar-thumb {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 2px;
+        .typing.show {
+            display: block !important;
         }
     </style>
 </head>
 
 <body>
+    <div id="version-tag">V5.4 - OPTIMIZED</div>
     <header>
         <h1>Project Sphere</h1>
     </header>
 
-    <div id="memory-bar" onclick="toggleMemoryBar(event)">
+    <div id="memory-bar" onclick="toggleMemoryBar()">
         <span><strong>Context:</strong> <span id="memory-content">正在唤醒记忆...</span></span>
-        <div style="display: flex; gap: 5px;">
-            <button class="vault-btn" onclick="toggleTodoVault(); event.stopPropagation();"
-                style="background: rgba(16, 185, 129, 0.2); border-color: #10b981;">待办</button>
-            <button class="vault-btn" onclick="toggleVault(); event.stopPropagation();">事实宝库</button>
+        <div class="session-actions">
+            <button class="session-btn" onclick="event.stopPropagation(); clearSession()">🗑️ 清空</button>
         </div>
-    </div>
-
-    <!-- 待办中心 -->
-    <div id="todo-vault">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-            <h2 style="font-family: 'Outfit';">AI 待办中心</h2>
-            <button class="vault-btn" onclick="toggleTodoVault()">关闭</button>
-        </div>
-        <div id="todo-list">正在同步任务...</div>
-    </div>
-
-    <!-- 事实看板 -->
-    <div id="fact-vault">
-        <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-            <h2 style="font-family:'Outfit', sans-serif;">L3 事实归档</h2>
-            <button class="vault-btn" onclick="toggleVault()">关闭</button>
-        </div>
-        <div id="vault-list"></div>
     </div>
 
     <div id="chat-container">
         <div class="message ai-message">
-            欢迎来到 Sphere。我是你的第二大脑。你可以直接呼唤我，或者点击下方“Capture”将内容物理同步至 Obsidian。
+            欢迎来到 Sphere。我是你的第二大脑，可以随时查阅你的长期记忆。
         </div>
     </div>
 
     <div class="input-area">
         <div class="action-row">
             <span id="typing-indicator" class="typing">Sphere 正在思考...</span>
-            <button class="capture-btn" onclick="triggerCapture()">Capture to Cloud</button>
         </div>
         <div class="input-row">
             <textarea id="msg-input" placeholder="输入灵感或问题..."></textarea>
@@ -394,229 +288,215 @@
         const typingIndicator = document.getElementById('typing-indicator');
         const memoryContent = document.getElementById('memory-content');
         let history = [];
-        let lastSentContent = ''; // 缓存最后一次发送的内容
-        let currentSummary = '';  // 存储 L2 动态摘要
+        let currentSummary = '';
+        let isProcessing = false; // 防止重复发送
 
-        // --- 简单鉴权保护 ---
-        function checkAuth() {
-            if (localStorage.getItem('sphere_auth') === 'verified') return true;
-            const pass = prompt("Project Sphere 独立访问暗号：");
-            if (pass === '2026') {
-                localStorage.setItem('sphere_auth', 'verified');
-                return true;
-            }
-            alert("暗号错误，拒绝访问。");
-            document.body.innerHTML = "<h1 style='color:white;text-align:center;margin-top:20%'>403 Forbidden</h1>";
-            return false;
-        }
-
-        // --- 初始化：本地优先 + 自动回填云端 ---
+        // 初始化
         window.onload = async () => {
-            if (!checkAuth()) return;
-
-            // 1. 基准：先从本地磁盘加载，确保无论服务器状态如何，用户都能立刻看到记录
-            const savedHistory = localStorage.getItem('sphere_history');
-            const savedSummary = localStorage.getItem('sphere_summary');
-
-            if (savedHistory) {
-                history = JSON.parse(savedHistory);
-                currentSummary = savedSummary || '';
-                await renderHistory(); // 异步渲染
-            }
-
-            // 2. 同步：尝试从云端对齐
+            console.log("[Frontend] V5.4 Optimized Version Loaded");
             try {
                 const response = await fetch('/session/load');
                 const data = await response.json();
-
-                // 核心逻辑：如果云端有更长/更新的历史，则同步云端
-                if (data.history && data.history.length >= history.length) {
-                    history = data.history;
-                    // 只有当云端摘要非空时才覆盖本地，防止重启导致的瞬间丢失
-                    if (data.summary) {
-                        currentSummary = data.summary;
-                    }
-                    await renderHistory();
-                    localStorage.setItem('sphere_history', JSON.stringify(history));
-                    localStorage.setItem('sphere_summary', currentSummary);
-                }
-                // 关键点：如果服务器是空（重启后），且本地有数据，则反向回填给服务器
-                else if (history.length > 0 && (!data.history || data.history.length === 0)) {
-                    console.log("Detected server wipe after update, re-hydrating cloud...");
-                    syncToCloud();
-                }
+                history = data.history || [];
+                currentSummary = data.summary || '';
+                await renderHistory();
+                console.log("[Init] Loaded session, history length:", history.length);
             } catch (e) {
-                console.warn("Cloud load failed, operating in local-only mode.", e);
+                console.error("Failed to load session:", e);
+                history = [];
+                currentSummary = '';
             }
         };
 
         async function renderHistory() {
             chatContainer.innerHTML = '';
-            history.forEach(item => {
+            history.forEach((item) => {
+                if (item.role === 'system') return;
                 addMessage(item.content, item.role === 'user' ? 'user' : 'ai', false);
             });
-
-            // 恢复 L2.5 + L2 的组合显示
-            let displayContent = "";
-            try {
-                const pRes = await fetch('/pinned');
-                const pinned = await pRes.json();
-                if (pinned && pinned.length > 0) {
-                    displayContent += "📌 [锁定事实]:\n" + pinned.map(f => `• ${f}`).join('\n') + "\n\n";
-                }
-            } catch (e) { console.warn("Load pinned failed in renderHistory", e); }
-
-            displayContent += "📝 [动态摘要]:\n" + (currentSummary || "尚无动态摘要");
+            let displayContent = "📝 [动态摘要]:\n" + (currentSummary || "尚无动态摘要");
             memoryContent.innerText = displayContent;
         }
 
+        function showTyping(text = 'Sphere 正在思考...') {
+            typingIndicator.innerText = text;
+            typingIndicator.className = 'typing show';
+        }
+
+        function hideTyping() {
+            typingIndicator.className = 'typing';
+            typingIndicator.innerText = 'Sphere 正在思考...';
+        }
+
+        function toggleMemoryBar() {
+            const memoryBar = document.getElementById('memory-bar');
+            memoryBar.classList.toggle('expanded');
+        }
+
         async function sendMessage() {
+            if (isProcessing) return;
+            
             const text = msgInput.value.trim();
             if (!text) return;
 
-            lastSentContent = text; // 更新缓存
-            addMessage(text, 'user');
+            console.log("[Frontend] Starting new message:", text);
+            isProcessing = true;
+            addMessage(text, 'user', true);
             msgInput.value = '';
 
-            // 创建一个占位的 AI 消息容器
-            const aiMsgDiv = addMessage('', 'ai');
-            typingIndicator.style.display = 'block';
+            history.push({ role: 'user', content: text });
+            const aiMsgDiv = addMessage('', 'ai'); // 恢复单一消息框
+            showTyping();
 
             const payload = {
                 message: text,
-                history: history,
-                summary: currentSummary
+                history: history.slice(0, -1),
+                summary: currentSummary,
+                auto_save: true  // 确保自动保存对话
             };
-            console.info("📤 [API Request Payload]:", payload);
+
+            console.log("[Frontend] Sending payload:", payload);
+
+            let actualContent = "";
 
             try {
-                const response = await fetch(`/chat`, {
+                const response = await fetch('/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
 
+                console.log("[Frontend] Response received, status:", response.status);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
                 const reader = response.body.getReader();
                 const decoder = new TextDecoder();
-                let fullContent = "";
+                let completed = false;
+                let buffer = "";
 
-                while (true) {
-                    const { done, value } = await reader.read();
-                    if (done) break;
-
-                    const chunk = decoder.decode(value, { stream: true });
-                    fullContent += chunk;
-
-                    // 检查是否包含元数据标记
-                    if (fullContent.includes('[METADATA]')) {
-                        const parts = fullContent.split('[METADATA]');
-                        // 展示正文部分 (屏蔽元数据)
-                        aiMsgDiv.innerText = parts[0];
-
-                        // 只有当流结束或者 JSON 看起来完整时再尝试解析
-                        // 这里我们采取保守策略：在循环结束后再统一解析最终元数据
-                    } else {
-                        aiMsgDiv.innerText = fullContent;
+                // 45秒超时保护
+                const timeoutId = setTimeout(() => {
+                    if (!completed) {
+                        console.warn("[Stream] Timeout - forcing completion");
+                        completed = true;
+                        hideTyping();
+                        isProcessing = false;
+                        reader.cancel().catch(() => {});
                     }
+                }, 45000);
 
-                    // 智能滚动：只有当用户本来就在底部时才自动滚动
-                    const isAtBottom = chatContainer.scrollHeight - chatContainer.scrollTop - chatContainer.clientHeight < 100;
-                    if (isAtBottom) {
+                try {
+                    while (!completed) {
+                        const { done, value } = await reader.read();
+                        
+                        if (done) {
+                            console.log("[Stream] Reader done");
+                            completed = true;
+                            break;
+                        }
+
+                        const chunk = decoder.decode(value, { stream: true });
+                        buffer += chunk;
+                        
+                        // 按双换行符分割完整的事件
+                        const events = buffer.split('\n\n');
+                        buffer = events.pop() || "";
+                        
+                        for (const event of events) {
+                            if (!event.trim()) continue;
+                            
+                            const lines = event.split('\n');
+                            let eventType = '';
+                            let eventData = '';
+                            
+                            // 解析事件 - 正确处理多行data
+                            for (let i = 0; i < lines.length; i++) {
+                                const line = lines[i];
+                                if (line.startsWith('event: ')) {
+                                    eventType = line.substring(7).trim();
+                                } else if (line.startsWith('data: ')) {
+                                    // 收集所有data行
+                                    const dataLines = [];
+                                    for (let j = i; j < lines.length; j++) {
+                                        const dataLine = lines[j];
+                                        if (dataLine.startsWith('data: ')) {
+                                            dataLines.push(dataLine.substring(6));
+                                        } else if (dataLine.startsWith('event: ')) {
+                                            break; // 遇到新事件，停止
+                                        }
+                                    }
+                                    eventData = dataLines.join('\n');
+                                    break;
+                                }
+                            }
+                            
+                            console.log("[Stream] Event:", eventType, "Data length:", eventData.length);
+                            
+                            // 处理不同类型的事件
+                            if (eventType === 'status' && !completed) {
+                                if (eventData.includes('正在查阅记忆')) {
+                                    showTyping('🧠 ' + eventData);
+                                } else {
+                                    showTyping(eventData);
+                                }
+                            } else if (eventType === 'content') {
+                                if (eventData.length > 0) {
+                                    actualContent += eventData;
+                                    aiMsgDiv.innerText = actualContent;
+                                    hideTyping(); // 开始显示内容时隐藏typing
+                                    console.log("[Stream] Content updated, total length:", actualContent.length);
+                                }
+                            } else if (eventType === 'metadata') {
+                                console.log("[Stream] Metadata event received");
+                                try {
+                                    const metadata = JSON.parse(eventData);
+                                    currentSummary = metadata.summary || currentSummary;
+                                    memoryContent.innerText = "📝 [动态摘要]:\n" + (currentSummary || "尚无动态摘要");
+                                    if (metadata.history && metadata.history.length > 0) {
+                                        history = metadata.history;
+                                    }
+                                } catch (e) {
+                                    console.warn("Metadata parse failed:", e);
+                                }
+                            } else if (eventType === 'done') {
+                                console.log("[Stream] Done event found");
+                                completed = true;
+                                break;
+                            }
+                        }
+
+                        // 自动滚动
                         chatContainer.scrollTop = chatContainer.scrollHeight;
+                        
+                        if (completed) break;
+                    }
+                } catch (readError) {
+                    console.error("[Stream] Read error:", readError);
+                    completed = true;
+                }
+
+                clearTimeout(timeoutId);
+                
+                // 最终处理
+                console.log("[Stream] Final processing, actualContent length:", actualContent.length);
+                if (actualContent.trim()) {
+                    aiMsgDiv.innerText = actualContent.trim();
+                    const lastItem = history[history.length - 1];
+                    if (!lastItem || lastItem.role === 'user') {
+                        history.push({ role: 'assistant', content: actualContent.trim() });
                     }
                 }
 
-                // 流结束后的最终处理：解析完整的元数据
-                if (fullContent.includes('[METADATA]')) {
-                    const parts = fullContent.split('[METADATA]');
-                    aiMsgDiv.innerText = parts[0]; // 确保最终显示不含标记位
-                    try {
-                        const metadata = JSON.parse(parts[1]);
-                        history = metadata.history || [];
-                        currentSummary = metadata.summary || '';
-
-                        let displayContent = "";
-                        if (metadata.pinned_facts && metadata.pinned_facts.length > 0) {
-                            displayContent += "📌 [锁定事实]:\n" + metadata.pinned_facts.map(f => `• ${f}`).join('\n') + "\n\n";
-                        }
-                        displayContent += "📝 [动态摘要]:\n" + (currentSummary || "尚无动态摘要");
-
-                        memoryContent.innerText = displayContent;
-
-                        if (metadata.todos) {
-                            todos = metadata.todos;
-                            renderTodos();
-                        }
-
-                        if (metadata.debug) {
-                            console.group("🤖 [Sphere Debug] LLM Deepseek Interaction");
-                            console.log("Raw Prompt Sequence:", metadata.debug.raw_prompt);
-                            console.log("System Context:", metadata.debug.system_prompt);
-                            console.log("History Window:", metadata.debug.history_count);
-                            console.log("L2 Summary Update:", metadata.summary);
-                            console.log("Latency (LLM):", metadata.debug.latency.llm_chat);
-                            console.log("Latency (Total):", metadata.debug.latency.total);
-                            console.groupEnd();
-                        }
-
-                        // 同步至本地与云端
-                        localStorage.setItem('sphere_history', JSON.stringify(history));
-                        localStorage.setItem('sphere_summary', currentSummary);
-                        syncToCloud();
-                    } catch (e) {
-                        console.error("Final Metadata Parse Error", e);
-                    }
-                }
             } catch (err) {
-                aiMsgDiv.innerText = '连接失败，请检查后端服务。';
+                console.error("Chat error:", err);
+                aiMsgDiv.innerText = '连接失败，请检查后端服务。错误: ' + err.message;
             } finally {
-                typingIndicator.style.display = 'none';
-            }
-        }
-
-        async function syncToCloud() {
-            try {
-                await fetch('/session/sync', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ history, summary: currentSummary })
-                });
-            } catch (e) {
-                console.warn("Cloud sync failed:", e);
-            }
-        }
-
-        async function triggerCapture() {
-            // 优先捕获输入框内容，若为空则尝试捕获最后一条发送的消息
-            let text = msgInput.value.trim();
-            if (!text) {
-                text = lastSentContent;
-            }
-
-            if (!text) {
-                alert('请先输入需要捕获的内容，或发送一条消息。');
-                return;
-            }
-
-            typingIndicator.innerText = '正在物理同步...';
-            typingIndicator.style.display = 'block';
-
-            try {
-                const response = await fetch(`/collect`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ content: text, source: 'mobile_chat' })
-                });
-                const data = await response.json();
-                addMessage(`✅ 灵感已同步至云端事实云 (L3)\n摘要：${data.summary}`, 'ai');
-                if (msgInput.value.trim() === text) {
-                    msgInput.value = '';
-                }
-            } catch (err) {
-                alert('捕获失败');
-            } finally {
-                typingIndicator.style.display = 'none';
-                typingIndicator.innerText = 'Sphere 正在思考...';
+                console.log("[Frontend] Request completed, actualContent length:", actualContent.length);
+                hideTyping();
+                isProcessing = false;
             }
         }
 
@@ -624,116 +504,31 @@
             const div = document.createElement('div');
             div.className = `message ${role}-message`;
             div.innerText = text;
-            if (!smooth) div.style.animation = 'none'; // 恢复历史时禁用动画，避免闪烁
             chatContainer.appendChild(div);
             chatContainer.scrollTop = chatContainer.scrollHeight;
             return div;
         }
 
-        async function toggleVault() {
-            const vault = document.getElementById('fact-vault');
-            if (vault.style.display === 'block') {
-                vault.style.display = 'none';
-                return;
-            }
-
-            vault.style.display = 'block';
-            const list = document.getElementById('vault-list');
-            list.innerHTML = '正在读取事实云...';
-
+        async function clearSession() {
+            if (!confirm('确定要清空所有对话记录吗？')) return;
+            
             try {
-                console.log("Fetching facts from /facts ...");
-                const response = await fetch('/facts');
-                console.log("Facts Response Status:", response.status);
-                const facts = await response.json();
-                console.log("Facts Data:", facts);
-
-                if (facts.length === 0) {
-                    list.innerHTML = '<div style="text-align:center; margin-top:50px; opacity:0.5;">宝库尚空，完成 Capture 以归档事实。</div>';
-                    return;
-                }
-
-                list.innerHTML = facts.reverse().map(f => {
-                    const contentStr = f.content || '';
-                    const displayOrigin = contentStr ? `"${contentStr.substring(0, 100)}${contentStr.length > 100 ? '...' : ''}"` : '<em>(自动沉淀事实)</em>';
-                    return `
-                        <div class="fact-item">
-                            <div class="fact-time">${new Date(f.timestamp).toLocaleString()}</div>
-                            <div class="fact-summary">${f.summary || '无摘要'}</div>
-                            <div class="fact-origin">${displayOrigin}</div>
-                        </div>
-                    `;
-                }).join('');
+                // 清空云端session
+                await fetch('/session/clear', { method: 'DELETE' });
+                
+                // 清空本地状态
+                history = [];
+                currentSummary = '';
+                
+                // 清空界面
+                chatContainer.innerHTML = '<div class="message ai-message">对话已清空。我是你的第二大脑，随时可以开始新的对话。</div>';
+                memoryContent.innerText = "📝 [动态摘要]:\n尚无动态摘要";
+                
+                console.log("[Session] 对话已清空（云端+本地）");
             } catch (e) {
-                list.innerHTML = '读取失败：' + e.message;
+                console.error("清空失败:", e);
+                alert('清空失败，请检查网络连接');
             }
-        }
-
-        let todos = [];
-
-        async function toggleTodoVault() {
-            const vault = document.getElementById('todo-vault');
-            if (vault.style.display === 'block') {
-                vault.style.display = 'none';
-                return;
-            }
-            vault.style.display = 'block';
-            await loadTodos();
-        }
-
-        async function loadTodos() {
-            try {
-                console.log("Fetching todos from /todos ...");
-                const response = await fetch('/todos');
-                console.log("Todos Response Status:", response.status);
-                todos = await response.json();
-                console.log("Todos Data:", todos);
-                renderTodos();
-            } catch (e) {
-                document.getElementById('todo-list').innerText = '任务加载失败';
-            }
-        }
-
-        function renderTodos() {
-            const list = document.getElementById('todo-list');
-            if (!todos || todos.length === 0) {
-                list.innerHTML = '<div style="text-align:center; margin-top:50px; opacity:0.5;">暂无待办事项。</div>';
-                return;
-            }
-            list.innerHTML = todos.map(t => {
-                const taskText = t.task || (typeof t === 'string' ? t : '未知任务');
-                return `
-                    <div class="todo-item ${t.completed ? 'completed' : ''}">
-                        <input type="checkbox" ${t.completed ? 'checked' : ''} onchange="toggleTodoStatus('${t.id || 'temp'}')">
-                        <span class="todo-text">${taskText}</span>
-                    </div>
-                `;
-            }).join('');
-        }
-
-        async function toggleTodoStatus(id) {
-            const todo = todos.find(t => t.id === id);
-            if (todo) {
-                todo.completed = !todo.completed;
-                renderTodos();
-                // 同步至服务器
-                try {
-                    await fetch('/todos/sync', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(todos)
-                    });
-                } catch (e) {
-                    console.error("Todo Sync Failed", e);
-                }
-            }
-        }
-
-        function toggleMemoryBar(e) {
-            // 防止点击按钮触发折叠
-            if (e.target.closest('.vault-btn')) return;
-            const bar = document.getElementById('memory-bar');
-            bar.classList.toggle('expanded');
         }
 
         msgInput.addEventListener('keypress', (e) => {

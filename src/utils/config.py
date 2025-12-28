@@ -6,22 +6,31 @@ import os
 class Settings(BaseSettings):
     # 应用通用设置
     PROJECT_NAME: str = "Project Sphere"
-    ENV: str = "development"
-    DEBUG: bool = True
+    ENV: str = "production"  # HF环境默认为生产环境
+    DEBUG: bool = False      # HF环境关闭调试模式
 
-    # 大模型 API 密钥 (从 .env 文件自动注入)
+    # 大模型 API 密钥 (从环境变量自动注入)
     OPENAI_API_KEY: Optional[str] = None
     DEEPSEEK_API_KEY: Optional[str] = None
     DEEPSEEK_BASE_URL: str = "https://api.deepseek.com"
 
-    # Qdrant 存储路径配置
-    QDRANT_HOST: str = "localhost"
-    QDRANT_PORT: int = 6333
-    # 动态构造相对路径，确保在不同环境下存储位置一致
-    QDRANT_PATH: str = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "data", "qdrant_storage")
+    # InfiniCloud 存储目录配置
+    INFINICLOUD_MEMORY_DIR: str = "/obsidian/mem"          # 长期记忆文件
+    INFINICLOUD_SESSIONS_DIR: str = "/obsidian/sessions"   # 会话归档文件
+    INFINICLOUD_CURRENT_DIR: str = "/obsidian/sessions/current"  # 当前对话文件
 
-    # 指定环境变量加载策略
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    # InfiniCloud 长期记忆存储 (WebDAV)
+    INFINICLOUD_URL: Optional[str] = None
+    INFINICLOUD_USER: Optional[str] = None
+    INFINICLOUD_PASS: Optional[str] = None
+
+    # 指定环境变量加载策略 - HF环境优先使用环境变量
+    model_config = SettingsConfigDict(
+        env_file=".env", 
+        env_file_encoding="utf-8",
+        extra="ignore",
+        case_sensitive=True
+    )
 
 # 实例化全局单例配置
 settings = Settings()

@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Sphere - Debug Panel</title>
+    <style>
+        body {
+            font-family: 'Consolas', 'Monaco', monospace;
+            background: #1a1a1a;
+            color: #f0f0f0;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: #4CAF50;
+            border-bottom: 2px solid #4CAF50;
+            padding-bottom: 10px;
+        }
+        .section {
+            background: #2d2d2d;
+            margin: 20px 0;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #4CAF50;
+        }
+        .section h2 {
+            color: #81C784;
+            margin-top: 0;
+        }
+        pre {
+            background: #1e1e1e;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .btn {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .btn:hover {
+            background: #45a049;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .status.success { background: #2e7d32; }
+        .status.error { background: #c62828; }
+        .status.info { background: #1976d2; }
+        .status.warning { background: #f57c00; }
+        
+        .archive-section {
+            border-left: 4px solid #ff9800 !important;
+        }
+        
+        .archive-section h2 {
+            color: #ffb74d !important;
+        }
+        
+        .btn.archive {
+            background: #ff9800;
+        }
+        
+        .btn.archive:hover {
+            background: #f57c00;
+        }
+        
+        .btn.danger {
+            background: #d32f2f;
+        }
+        
+        .btn.danger:hover {
+            background: #b71c1c;
+        }
+        
+        .memory-file {
+            background: #333;
+            margin: 10px 0;
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 3px solid #2196F3;
+        }
+        
+        .memory-file h3 {
+            color: #64B5F6;
+            margin: 0 0 10px 0;
+            cursor: pointer;
+        }
+        
+        .memory-file h3:hover {
+            color: #90CAF9;
+        }
+        
+        .memory-content {
+            background: #1e1e1e;
+            padding: 10px;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+            display: none;
+        }
+        
+        .memory-content.expanded {
+            display: block;
+        }
+        
+        .memory-meta {
+            font-size: 0.9em;
+            color: #888;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Project Sphere Debug Panel</h1>
+        
+        <div class="section">
+            <h2>系统状态</h2>
+            <div id="system-status">
+                <div class="status info">正在检查系统状态...</div>
+            </div>
+            <button class="btn" onclick="checkSystemStatus()">刷新状态</button>
+        </div>
+
+        <div class="section">
+            <h2>最近的Prompt日志</h2>
+            <button class="btn" onclick="loadPromptLog()">加载Prompt日志</button>
+            <pre id="prompt-log">点击"加载Prompt日志"查看最近的对话prompt...</pre>
+        </div>
+
+        <div class="section">
+            <h2>记忆系统测试</h2>
+            <button class="btn" onclick="testMemorySystem()">测试记忆系统</button>
+            <div id="memory-test-result"></div>
+        </div>
+
+        <div class="section">
+            <h2>API测试</h2>
+            <button class="btn" onclick="testChatAPI()">测试聊天API</button>
+            <div id="api-test-result"></div>
+        </div>
+
+        <div class="section archive-section">
+            <h2>每日归档管理</h2>
+            <button class="btn archive" onclick="triggerDailyArchive()">🗂️ 手动触发每日归档</button>
+            <button class="btn" onclick="loadCurrentSession()">📊 加载当前会话状态</button>
+            <div id="archive-result"></div>
+            <div id="session-info"></div>
+        </div>
+
+        <div class="section">
+            <h2>M3长期记忆查看</h2>
+            <button class="btn" onclick="loadMemoryList()">📋 加载记忆文件列表</button>
+            <button class="btn" onclick="loadAllMemories()">📚 查看所有记忆内容</button>
+            <button class="btn danger" onclick="deleteMemoryFile()">🗑️ 删除记忆文件</button>
+            <div id="memory-list"></div>
+            <div id="memory-viewer"></div>
+        </div>
+    </div>
+
+    <script>
+        async function checkSystemStatus() {
+            const statusDiv = document.getElementById('system-status');
+            statusDiv.innerHTML = '<div class="status info">检查中...</div>';
+            
+            try {
+                const response = await fetch('/health');
+                const data = await response.json();
+                
+                if (response.ok) {
+                    statusDiv.innerHTML = `
+                        <div class="status success">✅ 系统正常运行</div>
+                        <div class="status info">项目: ${data.project}</div>
+                        <div class="status info">状态: ${data.status}</div>
+                    `;
+                } else {
+                    statusDiv.innerHTML = '<div class="status error">❌ 系统异常</div>';
+                }
+            } catch (error) {
+                statusDiv.innerHTML = `<div class="status error">❌ 连接失败: ${error.message}</div>`;
+            }
+        }
+
+        async function loadPromptLog() {
+            const logDiv = document.getElementById('prompt-log');
+            logDiv.textContent = '加载中...';
+            
+            try {
+                const response = await fetch('/debug/prompt');
+                const data = await response.json();
+                logDiv.textContent = data.content || '暂无日志内容';
+            } catch (error) {
+                logDiv.textContent = `加载失败: ${error.message}`;
+            }
+        }
+
+        async function testMemorySystem() {
+            const resultDiv = document.getElementById('memory-test-result');
+            resultDiv.innerHTML = '<div class="status info">测试中...</div>';
+            
+            try {
+                // 测试记忆文件列表
+                const listResponse = await fetch('/memory/list');
+                const listData = await listResponse.json();
+                
+                if (listData.files && listData.files.length > 0) {
+                    // 测试读取第一个文件
+                    const testFile = listData.files[0];
+                    const readResponse = await fetch('/memory/fetch', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ filename: testFile })
+                    });
+                    const readData = await readResponse.json();
+                    
+                    resultDiv.innerHTML = `
+                        <div class="status success">✅ 记忆系统正常</div>
+                        <div class="status info">可用文件数: ${listData.files.length}</div>
+                        <div class="status info">测试文件: ${testFile}</div>
+                        <div class="status info">读取状态: ${readData.success ? '成功' : '失败'}</div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = '<div class="status error">❌ 未找到记忆文件</div>';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="status error">❌ 测试失败: ${error.message}</div>`;
+            }
+        }
+
+        async function testChatAPI() {
+            const resultDiv = document.getElementById('api-test-result');
+            resultDiv.innerHTML = '<div class="status info">测试中...</div>';
+            
+            try {
+                const response = await fetch('/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        message: '测试消息',
+                        history: [],
+                        summary: '',
+                        auto_save: false
+                    })
+                });
+                
+                if (response.ok) {
+                    resultDiv.innerHTML = '<div class="status success">✅ 聊天API响应正常</div>';
+                } else {
+                    resultDiv.innerHTML = `<div class="status error">❌ API错误: ${response.status}</div>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="status error">❌ 连接失败: ${error.message}</div>`;
+            }
+        }
+
+        async function loadCurrentSession() {
+            const sessionDiv = document.getElementById('session-info');
+            sessionDiv.innerHTML = '<div class="status info">加载会话状态中...</div>';
+            
+            try {
+                const response = await fetch('/session/load');
+                const data = await response.json();
+                
+                const historyCount = data.history ? data.history.length : 0;
+                const summaryLength = data.summary ? data.summary.length : 0;
+                
+                sessionDiv.innerHTML = `
+                    <div class="status success">✅ 会话状态加载成功</div>
+                    <div class="status info">历史消息数: ${historyCount}</div>
+                    <div class="status info">摘要长度: ${summaryLength} 字符</div>
+                    <div class="status info">最后更新: ${new Date().toLocaleString()}</div>
+                `;
+                
+                // 将会话数据存储到全局变量，供归档使用
+                window.currentSession = data;
+                
+            } catch (error) {
+                sessionDiv.innerHTML = `<div class="status error">❌ 加载失败: ${error.message}</div>`;
+            }
+        }
+
+        async function triggerDailyArchive() {
+            const resultDiv = document.getElementById('archive-result');
+            resultDiv.innerHTML = '<div class="status info">正在触发每日归档...</div>';
+            
+            try {
+                // 如果没有加载会话数据，先加载
+                if (!window.currentSession) {
+                    const sessionResponse = await fetch('/session/load');
+                    window.currentSession = await sessionResponse.json();
+                }
+                
+                const archiveResponse = await fetch('/archive/trigger', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        history: window.currentSession.history || [],
+                        summary: window.currentSession.summary || ''
+                    })
+                });
+                
+                const result = await archiveResponse.json();
+                
+                if (archiveResponse.ok) {
+                    let statusHtml = '<div class="status success">✅ 每日归档执行成功</div>';
+                    
+                    if (result.success) {
+                        statusHtml += `<div class="status info">📝 会话摘要: ${(result.session_summary || '').substring(0, 100)}...</div>`;
+                        statusHtml += `<div class="status info">🧠 新M2长度: ${(result.new_m2 || '').length} 字符</div>`;
+                        statusHtml += `<div class="status info">📚 归档文件: ${result.archive_file || '未知'}</div>`;
+                        statusHtml += `<div class="status info">🔧 M3补丁数量: ${(result.patch_results || []).length}</div>`;
+                        statusHtml += `<div class="status info">🗑️ M1已清空: ${result.m1_cleared ? '是' : '否'}</div>`;
+                        
+                        if (result.patch_results && result.patch_results.length > 0) {
+                            statusHtml += '<div class="status info">📋 M3更新详情:</div>';
+                            result.patch_results.forEach(patch => {
+                                const status = patch.success ? '✅' : '❌';
+                                statusHtml += `<div class="status info">  ${status} ${patch.filename}</div>`;
+                            });
+                        }
+                    }
+                    
+                    resultDiv.innerHTML = statusHtml;
+                    
+                    // 归档成功后重新加载会话状态
+                    setTimeout(() => {
+                        loadCurrentSession();
+                    }, 1000);
+                    
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="status error">❌ 归档失败</div>
+                        <div class="status error">错误: ${result.error || '未知错误'}</div>
+                    `;
+                }
+                
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="status error">❌ 归档执行失败: ${error.message}</div>`;
+            }
+        }
+
+        async function loadMemoryList() {
+            const listDiv = document.getElementById('memory-list');
+            listDiv.innerHTML = '<div class="status info">加载记忆文件列表中...</div>';
+            
+            try {
+                const response = await fetch('/memory/list');
+                const data = await response.json();
+                
+                if (data.files && data.files.length > 0) {
+                    let listHtml = '<div class="status success">✅ 记忆文件列表加载成功</div>';
+                    listHtml += '<div class="status info">点击文件名查看内容:</div>';
+                    
+                    data.files.forEach(filename => {
+                        listHtml += `<div class="status info">📄 <span style="cursor: pointer; text-decoration: underline;" onclick="loadSingleMemory('${filename}')">${filename}</span></div>`;
+                    });
+                    
+                    listDiv.innerHTML = listHtml;
+                } else {
+                    listDiv.innerHTML = '<div class="status error">❌ 未找到记忆文件</div>';
+                }
+            } catch (error) {
+                listDiv.innerHTML = `<div class="status error">❌ 加载失败: ${error.message}</div>`;
+            }
+        }
+
+        async function loadSingleMemory(filename) {
+            const viewerDiv = document.getElementById('memory-viewer');
+            viewerDiv.innerHTML = `<div class="status info">正在加载 ${filename}...</div>`;
+            
+            try {
+                const response = await fetch('/memory/read', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ filename: filename })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    const content = data.content || '';
+                    const lines = content.split('\n').length;
+                    const chars = content.length;
+                    
+                    viewerDiv.innerHTML = `
+                        <div class="memory-file">
+                            <h3 onclick="toggleMemoryContent('${filename}')">${filename} (${lines} 行, ${chars} 字符)</h3>
+                            <div class="memory-meta">点击标题展开/收起内容</div>
+                            <div id="content-${filename}" class="memory-content">${escapeHtml(content)}</div>
+                        </div>
+                    `;
+                } else {
+                    viewerDiv.innerHTML = `<div class="status error">❌ 读取失败: ${data.error || '未知错误'}</div>`;
+                }
+            } catch (error) {
+                viewerDiv.innerHTML = `<div class="status error">❌ 读取失败: ${error.message}</div>`;
+            }
+        }
+
+        async function loadAllMemories() {
+            const viewerDiv = document.getElementById('memory-viewer');
+            viewerDiv.innerHTML = '<div class="status info">正在加载所有记忆文件...</div>';
+            
+            try {
+                // 先获取文件列表
+                const listResponse = await fetch('/memory/list');
+                const listData = await listResponse.json();
+                
+                if (!listData.files || listData.files.length === 0) {
+                    viewerDiv.innerHTML = '<div class="status error">❌ 未找到记忆文件</div>';
+                    return;
+                }
+                
+                let allMemoriesHtml = '<div class="status success">✅ 所有记忆文件加载完成</div>';
+                
+                // 逐个加载每个文件
+                for (const filename of listData.files) {
+                    try {
+                        const response = await fetch('/memory/read', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ filename: filename })
+                        });
+                        
+                        const data = await response.json();
+                        
+                        if (data.success) {
+                            const content = data.content || '';
+                            const lines = content.split('\n').length;
+                            const chars = content.length;
+                            
+                            allMemoriesHtml += `
+                                <div class="memory-file">
+                                    <h3 onclick="toggleMemoryContent('${filename}')">${filename} (${lines} 行, ${chars} 字符)</h3>
+                                    <div class="memory-meta">点击标题展开/收起内容</div>
+                                    <div id="content-${filename}" class="memory-content">${escapeHtml(content)}</div>
+                                </div>
+                            `;
+                        } else {
+                            allMemoriesHtml += `
+                                <div class="memory-file">
+                                    <h3>${filename}</h3>
+                                    <div class="status error">读取失败: ${data.error || '未知错误'}</div>
+                                </div>
+                            `;
+                        }
+                    } catch (error) {
+                        allMemoriesHtml += `
+                            <div class="memory-file">
+                                <h3>${filename}</h3>
+                                <div class="status error">读取失败: ${error.message}</div>
+                            </div>
+                        `;
+                    }
+                }
+                
+                viewerDiv.innerHTML = allMemoriesHtml;
+                
+            } catch (error) {
+                viewerDiv.innerHTML = `<div class="status error">❌ 加载失败: ${error.message}</div>`;
+            }
+        }
+
+        function toggleMemoryContent(filename) {
+            const contentDiv = document.getElementById(`content-${filename}`);
+            if (contentDiv) {
+                contentDiv.classList.toggle('expanded');
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        async function deleteMemoryFile() {
+            // 先获取文件列表
+            try {
+                const listResponse = await fetch('/memory/list');
+                const listData = await listResponse.json();
+                
+                if (!listData.files || listData.files.length === 0) {
+                    alert('没有可删除的记忆文件');
+                    return;
+                }
+                
+                // 让用户选择要删除的文件
+                const filename = prompt(`请输入要删除的文件名：\n\n可用文件：\n${listData.files.join('\n')}`);
+                
+                if (!filename) return;
+                
+                if (!listData.files.includes(filename)) {
+                    alert('文件不存在');
+                    return;
+                }
+                
+                if (!confirm(`确定要删除记忆文件 "${filename}" 吗？\n\n此操作不可撤销！`)) {
+                    return;
+                }
+                
+                // 执行删除
+                const deleteResponse = await fetch('/memory/delete', {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ filename: filename })
+                });
+                
+                const deleteResult = await deleteResponse.json();
+                
+                if (deleteResult.success) {
+                    alert(`文件 "${filename}" 已成功删除`);
+                    // 刷新文件列表
+                    loadMemoryList();
+                    // 清空查看器
+                    document.getElementById('memory-viewer').innerHTML = '';
+                } else {
+                    alert(`删除失败: ${deleteResult.error}`);
+                }
+                
+            } catch (error) {
+                alert(`删除操作失败: ${error.message}`);
+            }
+        }
+
+        // 页面加载时自动检查状态
+        window.onload = function() {
+            checkSystemStatus();
+            loadCurrentSession();
+            loadMemoryList();
+        };
+    </script>
+</body>
+</html>

@@ -4,18 +4,28 @@ from langchain_core.messages import BaseMessage, SystemMessage, HumanMessage
 from langgraph.graph import StateGraph, END
 from langchain_openai import ChatOpenAI
 from src.utils.config import settings
-from src.storage.qdrant_client import vector_store
+# Qdrant 已移除，使用 InfiniCloud 作为唯一存储
 import logging
 import json
 
 logger = logging.getLogger(__name__)
 
 # 初始化大语言模型驱动 (DeepSeek 适配版)
+# 普通对话模型
 llm = ChatOpenAI(
     model="deepseek-chat", 
     api_key=settings.DEEPSEEK_API_KEY, 
     base_url=settings.DEEPSEEK_BASE_URL,
     temperature=0
+)
+
+# 推理模型 (R1) - 用于需要深度思考的任务
+llm_reasoner = ChatOpenAI(
+    model="deepseek-reasoner",
+    api_key=settings.DEEPSEEK_API_KEY,
+    base_url=settings.DEEPSEEK_BASE_URL,
+    temperature=0,
+    streaming=True  # R1 支持流式输出思考过程
 )
 
 # 定义 Agent 的状态结构

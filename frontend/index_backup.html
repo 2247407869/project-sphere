@@ -1,0 +1,1099 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Project Sphere | Dialogue</title>
+    <!-- 强制禁用缓存 -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Outfit:wght@300;600&display=swap"
+        rel="stylesheet">
+    <style>
+        /* VERSION WATERMARK */
+        #version-tag {
+            position: fixed;
+            top: 0;
+            right: 0;
+            background: #ff4444;
+            color: white;
+            padding: 5px 10px;
+            z-index: 9999;
+            font-weight: bold;
+            font-size: 12px;
+            pointer-events: none;
+        }
+
+        :root {
+            --bg-color: #0d0d12;
+            --card-bg: rgba(255, 255, 255, 0.03);
+            --accent-color: #6366f1;
+            --user-msg-bg: #6366f1;
+            --ai-msg-bg: rgba(255, 255, 255, 0.08);
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --glass-border: rgba(255, 255, 255, 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        html,
+        body {
+            height: 100%;
+            height: -webkit-fill-available;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header */
+        header {
+            padding: 0.6rem;
+            background: rgba(13, 13, 18, 0.8);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--glass-border);
+            text-align: center;
+            z-index: 10;
+        }
+
+        h1 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.1rem;
+            background: linear-gradient(135deg, #fff 0%, var(--accent-color) 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* Chat Area */
+        /* Memory Bar */
+        #memory-bar {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--glass-border);
+            padding: 0.7rem 1.2rem;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            z-index: 5;
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 0.5rem;
+            max-height: 48px;
+            /* 默认紧凑高度 */
+            transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow: hidden;
+            cursor: pointer;
+        }
+
+        #memory-bar.expanded {
+            max-height: 48vh;
+            background: rgba(13, 13, 18, 0.98);
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            touch-action: pan-y;
+            overscroll-behavior: contain;
+        }
+
+        #memory-content {
+            flex: 1;
+            line-height: 1.5;
+            word-break: break-word;
+            opacity: 0.8;
+        }
+
+        #memory-bar.expanded #memory-content {
+            opacity: 1;
+        }
+
+        .vault-btn {
+            background: rgba(99, 102, 241, 0.2);
+            border: 1px solid var(--accent-color);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        /* 事实看板与待办看板模态框 */
+        #fact-vault,
+        #todo-vault {
+            display: none;
+            position: fixed;
+            top: 10%;
+            left: 5%;
+            width: 90%;
+            height: 80%;
+            background: rgba(13, 13, 18, 0.98);
+            backdrop-filter: blur(25px);
+            z-index: 2000;
+            border-radius: 24px;
+            border: 1px solid var(--glass-border);
+            padding: 1.5rem;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            touch-action: pan-y;
+            overscroll-behavior: contain;
+            color: var(--text-primary);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8);
+        }
+
+        .todo-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            background: rgba(255, 255, 255, 0.03);
+            margin-bottom: 0.8rem;
+            padding: 1rem;
+            border-radius: 16px;
+            transition: opacity 0.3s;
+        }
+
+        .todo-item.completed {
+            opacity: 0.5;
+        }
+
+        .todo-item input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+        .todo-text {
+            flex: 1;
+            font-size: 0.95rem;
+        }
+
+        .fact-item {
+            background: rgba(255, 255, 255, 0.03);
+            margin-bottom: 1rem;
+            padding: 1rem;
+            border-radius: 16px;
+            border-left: 3px solid var(--accent-color);
+        }
+
+        .fact-time {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.3rem;
+        }
+
+        .fact-summary {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--accent-color);
+        }
+
+        .fact-origin {
+            font-size: 0.85rem;
+            opacity: 0.8;
+            line-height: 1.4;
+        }
+
+        #chat-container {
+            flex: 1;
+            min-height: 0;
+            overflow-y: auto;
+            overflow-x: hidden;
+            -webkit-overflow-scrolling: touch;
+            touch-action: pan-y;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .message {
+            max-width: 85%;
+            padding: 1rem 1.2rem;
+            border-radius: 20px;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            position: relative;
+            /* animation: slideIn 0.3s ease-out; 临时禁用以优化移动端滑动 */
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .user-message {
+            align-self: flex-end;
+            background: var(--user-msg-bg);
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .ai-message {
+            align-self: flex-start;
+            background: var(--ai-msg-bg);
+            border: 1px solid var(--glass-border);
+            border-bottom-left-radius: 4px;
+        }
+
+        .ai-message::before {
+            content: 'Sphere';
+            position: absolute;
+            top: -1.2rem;
+            left: 0.2rem;
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        /* Message Delete Button */
+        .message-wrapper {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.5rem;
+            max-width: 90%;
+        }
+
+        .message-wrapper.user-wrapper {
+            align-self: flex-end;
+            flex-direction: row-reverse;
+        }
+
+        .message-wrapper.ai-wrapper {
+            align-self: flex-start;
+        }
+
+        .delete-btn {
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid rgba(239, 68, 68, 0.5);
+            color: #ef4444;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            font-size: 0.7rem;
+            cursor: pointer;
+            opacity: 0.4;
+            transition: opacity 0.2s;
+            flex-shrink: 0;
+            margin-top: 0.5rem;
+        }
+
+        .message-wrapper:hover .delete-btn {
+            opacity: 1;
+        }
+
+        .delete-btn:hover {
+            background: rgba(239, 68, 68, 0.4);
+        }
+
+        /* Input Area */
+        .input-area {
+            padding: 1.2rem;
+            background: rgba(13, 13, 18, 0.9);
+            border-top: 1px solid var(--glass-border);
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+        }
+
+        .input-row {
+            display: flex;
+            gap: 0.8rem;
+        }
+
+        textarea {
+            flex: 1;
+            height: 50px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 0.8rem 1.2rem;
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 1rem;
+            resize: none;
+            outline: none;
+            transition: border-color 0.3s ease;
+        }
+
+        textarea:focus {
+            border-color: var(--accent-color);
+        }
+
+        .btn-circle {
+            width: 50px;
+            height: 50px;
+            background: var(--accent-color);
+            border: none;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
+        }
+
+        .action-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .capture-btn {
+            background: transparent;
+            border: 1px solid var(--accent-color);
+            color: var(--accent-color);
+            padding: 0.4rem 1rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        /* Loading */
+        .typing {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-left: 0.5rem;
+            display: none;
+        }
+
+        /* Scrollbar */
+        #chat-container::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        #chat-container::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+        }
+
+        /* Session Management Buttons */
+        .session-actions {
+            display: flex;
+            gap: 0.5rem;
+            flex-shrink: 0;
+        }
+
+        .session-btn {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid var(--glass-border);
+            color: var(--text-secondary);
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .session-btn:hover {
+            background: rgba(99, 102, 241, 0.3);
+            color: white;
+            border-color: var(--accent-color);
+        }
+
+        .session-btn.danger:hover {
+            background: rgba(239, 68, 68, 0.3);
+            border-color: #ef4444;
+        }
+
+        /* Summary Edit Modal */
+        #summary-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 3000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #summary-modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: var(--bg-color);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 1.5rem;
+            width: 90%;
+            max-width: 500px;
+            max-height: 80vh;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .modal-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+
+        #summary-textarea {
+            width: 100%;
+            height: 200px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 1rem;
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 0.9rem;
+            resize: vertical;
+            outline: none;
+        }
+
+        #summary-textarea:focus {
+            border-color: var(--accent-color);
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.8rem;
+            margin-top: 1rem;
+        }
+
+        .modal-btn {
+            padding: 0.6rem 1.2rem;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            border: none;
+        }
+
+        .modal-btn.primary {
+            background: var(--accent-color);
+            color: white;
+        }
+
+        .modal-btn.secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-secondary);
+        }
+    </style>
+</head>
+
+<body>
+    <div id="version-tag">V2.5 - ROOT FIX</div>
+    <header>
+        <h1>Project Sphere</h1>
+    </header>
+
+    <div id="memory-bar" onclick="toggleMemoryBar(event)">
+        <span><strong>Context:</strong> <span id="memory-content">正在唤醒记忆...</span></span>
+        <div class="session-actions" onclick="event.stopPropagation()">
+            <button class="session-btn" onclick="openSummaryEditor()">📝 编辑</button>
+            <button class="session-btn danger" onclick="clearSession()">🗑️ 清空</button>
+        </div>
+    </div>
+
+    <!-- Summary Edit Modal -->
+    <div id="summary-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-title">编辑动态摘要</span>
+                <button class="modal-close" onclick="closeSummaryEditor()">&times;</button>
+            </div>
+            <textarea id="summary-textarea" placeholder="输入动态摘要..."></textarea>
+            <div class="modal-actions">
+                <button class="modal-btn secondary" onclick="closeSummaryEditor()">取消</button>
+                <button class="modal-btn primary" onclick="saveSummary()">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="chat-container">
+        <div class="message ai-message">
+            欢迎来到 Sphere。我是你的第二大脑，可以随时查阅你的长期记忆。
+        </div>
+    </div>
+
+    <div class="input-area">
+        <div class="action-row">
+            <span id="typing-indicator" class="typing">Sphere 正在思考...</span>
+        </div>
+        <div class="input-row">
+            <textarea id="msg-input" placeholder="输入灵感或问题..."></textarea>
+            <button class="btn-circle" onclick="sendMessage()">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round" style="color: white;">
+                    <line x1="22" y1="2" x2="11" y2="13"></line>
+                    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const chatContainer = document.getElementById('chat-container');
+        const msgInput = document.getElementById('msg-input');
+        const typingIndicator = document.getElementById('typing-indicator');
+        const memoryContent = document.getElementById('memory-content');
+        let history = [];
+        let lastSentContent = ''; // 缓存最后一次发送的内容
+        let currentSummary = '';  // 存储 L2 动态摘要
+
+        // --- 鉴权已移除 ---
+
+        // --- 初始化：从后端加载会话（后端为唯一真实来源）---
+        window.onload = async () => {
+            console.log("[Frontend] Version 2.2 - Stream Fix Loaded");
+            try {
+                const response = await fetch('/session/load');
+                const data = await response.json();
+
+                history = data.history || [];
+                currentSummary = data.summary || '';
+
+                await renderHistory();
+                console.log("[Init] Loaded session from backend, history length:", history.length);
+            } catch (e) {
+                console.error("Failed to load session from backend:", e);
+                history = [];
+                currentSummary = '';
+            }
+        };
+
+        async function renderHistory() {
+            chatContainer.innerHTML = '';
+            let displayIndex = 0;
+            history.forEach((item, realIndex) => {
+                // 跳过 system 消息（注入的记忆内容，不需要显示给用户）
+                if (item.role === 'system') return;
+                // 只有用户消息才传递索引（用于删除）
+                const msgIndex = item.role === 'user' ? realIndex : null;
+                addMessage(item.content, item.role === 'user' ? 'user' : 'ai', false, msgIndex);
+                displayIndex++;
+            });
+
+            // 显示当前摘要
+            let displayContent = "📝 [动态摘要]:\n" + (currentSummary || "尚无动态摘要");
+            memoryContent.innerText = displayContent;
+        }
+
+        async function sendMessage() {
+            const text = msgInput.value.trim();
+            if (!text) return;
+
+            lastSentContent = text; // 更新缓存
+            const userMsgIndex = history.length; // 记录当前索引，用于删除按钮
+            addMessage(text, 'user', true, userMsgIndex);
+            msgInput.value = '';
+
+            // 立即将用户消息加入 history
+            history.push({ role: 'user', content: text });
+            localStorage.setItem('sphere_history', JSON.stringify(history));
+
+            // 创建一个占位的 AI 消息容器
+            const aiMsgDiv = addMessage('', 'ai');
+            typingIndicator.style.display = 'block';
+
+            const payload = {
+                message: text,
+                history: history.slice(0, -1), // 发送时不含刚加的这条
+                summary: currentSummary
+            };
+            console.info("📤 [API Request Payload]:", payload);
+
+            try {
+                const response = await fetch(`/chat`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let fullContent = "";
+                let statusLog = "";
+                let actualContent = "";
+                let lastChunkTime = Date.now();
+                let streamTimeout = null;
+
+                // 超时自愈机制：防止无限等待（增加到30秒，支持复杂查询）
+                const checkTimeout = () => {
+                    const now = Date.now();
+                    if (now - lastChunkTime > 30000 && actualContent.trim().length > 0) {
+                        console.warn("[Stream] Timeout detected (30s). Forcing completion.");
+                        typingIndicator.style.display = 'none';
+                        reader.cancel().catch(e => console.log("Reader cancel:", e));
+                    } else {
+                        streamTimeout = requestAnimationFrame(checkTimeout);
+                    }
+                };
+                streamTimeout = requestAnimationFrame(checkTimeout);
+
+                let streamCompleted = false;
+                
+                while (true) {
+                    const { done, value } = await reader.read();
+                    lastChunkTime = Date.now();
+
+                    if (done) {
+                        console.log("[Stream] Reader done, breaking loop.");
+                        break;
+                    }
+
+                    const chunk = decoder.decode(value, { stream: true });
+                    fullContent += chunk;
+
+                    // 解析 SSE 格式：event: xxx\ndata: xxx\n\n
+                    const events = fullContent.split('\n\n');
+                    for (let i = 0; i < events.length - 1; i++) {
+                        const eventBlock = events[i];
+                        let eventType = 'content';
+                        let eventData = '';
+
+                        for (const line of eventBlock.split('\n')) {
+                            if (line.startsWith('event: ')) {
+                                eventType = line.substring(7);
+                            } else if (line.startsWith('data: ')) {
+                                eventData = line.substring(6);
+                            }
+                        }
+
+                        if (eventType === 'status') {
+                            statusLog = eventData;
+                            // 只有在流未完成时才显示状态
+                            if (!streamCompleted && typingIndicator.style.display !== 'none') {
+                                typingIndicator.style.display = 'block';
+                                // 特殊处理工具调用状态
+                                if (eventData.includes('正在查阅记忆') || eventData.includes('fetch_memory')) {
+                                    typingIndicator.innerText = '🧠 ' + eventData;
+                                } else {
+                                    typingIndicator.innerText = eventData;
+                                }
+                            }
+                        } else if (eventType === 'content') {
+                            actualContent += eventData;
+                            aiMsgDiv.innerText = actualContent;
+                        } else if (eventType === 'metadata') {
+                            try {
+                                const metadata = JSON.parse(eventData);
+                                currentSummary = metadata.summary || currentSummary;
+                                memoryContent.innerText = "📝 [动态摘要]:\n" + (currentSummary || "尚无动态摘要");
+                                console.log("[Metadata] Summary updated:", currentSummary.substring(0, 50) + "...");
+
+                                if (metadata.history && metadata.history.length > 0) {
+                                    history = metadata.history;
+                                    console.log("[Metadata] Using backend history, length:", history.length);
+                                }
+                            } catch (e) {
+                                console.warn("Metadata parse failed:", e);
+                            }
+                            // 不要在这里隐藏indicator，等done事件
+                        } else if (eventType === 'done') {
+                            console.log("[Stream] Received done event. Marking as completed.");
+                            streamCompleted = true;
+                            // 立即强制清理状态
+                            typingIndicator.style.setProperty('display', 'none', 'important');
+                            typingIndicator.innerText = 'Sphere 正在思考...';
+                            console.log("[Stream] Done event - forced hide typing indicator");
+                            break;
+                        } else if (eventType === 'error') {
+                            console.error("[Stream] Error:", eventData);
+                        }
+                    }
+                    // 保留未完成的最后一个事件块
+                    fullContent = events[events.length - 1];
+
+                    const isAtBottom = chatContainer.scrollHeight - chatContainer.scrollTop - chatContainer.clientHeight < 100;
+                    if (isAtBottom) {
+                        chatContainer.scrollTop = chatContainer.scrollHeight;
+                    }
+
+                    // 如果收到done事件，退出循环
+                    if (streamCompleted) break;
+                } // while end
+
+                // 清除超时检测
+                if (streamTimeout) cancelAnimationFrame(streamTimeout);
+
+                // 确保状态清理
+                console.log("[Stream] Cleaning up state. Stream completed:", streamCompleted);
+                console.log("[Stream] Final content length:", actualContent.length);
+                console.log("[Stream] Typing indicator display:", typingIndicator.style.display);
+                
+                // 强制清理状态
+                typingIndicator.style.setProperty('display', 'none', 'important');
+                typingIndicator.innerText = 'Sphere 正在思考...';
+                
+                console.log("[Stream] After cleanup - Typing indicator display:", typingIndicator.style.display);
+
+                let finalContent = actualContent.trim();
+
+                if (finalContent) {
+                    aiMsgDiv.innerText = finalContent;
+
+                    // 检查后端返回的 history 是否已经包含这条回复
+                    const lastHistoryItem = history[history.length - 1];
+                    const alreadyHasReply = lastHistoryItem &&
+                        (lastHistoryItem.role === 'assistant' || lastHistoryItem.role === 'ai') &&
+                        lastHistoryItem.content === finalContent;
+
+                    // 如果后端 history 没有包含这条回复，手动添加（fallback 机制）
+                    if (!alreadyHasReply) {
+                        history.push({ role: 'assistant', content: finalContent });
+                        console.log("[Fallback] Manually pushed AI reply to history");
+                    }
+                } else {
+                    console.warn("[Stream] No content received, this might indicate an issue");
+                }
+            } catch (err) {
+                console.error("Chat Error Caught:", err);
+                aiMsgDiv.innerText = '连接失败，请检查后端服务。';
+                // 确保清理状态
+                if (streamTimeout) cancelAnimationFrame(streamTimeout);
+                typingIndicator.style.setProperty('display', 'none', 'important');
+                typingIndicator.innerText = 'Sphere 正在思考...';
+            } finally {
+                console.log("[Stream] Finally block executed. Ensuring complete cleanup.");
+                // 确保无论如何最后都隐藏并重置状态
+                if (typingIndicator) {
+                    typingIndicator.style.setProperty('display', 'none', 'important');
+                    typingIndicator.innerText = 'Sphere 正在思考...';
+                }
+                // 清理可能残留的超时检测
+                if (streamTimeout) {
+                    cancelAnimationFrame(streamTimeout);
+                    streamTimeout = null;
+                }
+                
+                // 添加一个延迟确保状态清理
+                setTimeout(() => {
+                    if (typingIndicator && typingIndicator.style.display !== 'none') {
+                        console.warn("[Stream] Force hiding typing indicator after delay");
+                        typingIndicator.style.setProperty('display', 'none', 'important');
+                        typingIndicator.innerText = 'Sphere 正在思考...';
+                        
+                        // 最后手段：直接移除并重新创建元素
+                        const parent = typingIndicator.parentNode;
+                        const newIndicator = document.createElement('span');
+                        newIndicator.id = 'typing-indicator';
+                        newIndicator.className = 'typing';
+                        newIndicator.innerText = 'Sphere 正在思考...';
+                        newIndicator.style.display = 'none';
+                        parent.replaceChild(newIndicator, typingIndicator);
+                        console.log("[Stream] Replaced typing indicator element");
+                    }
+                }, 1000);
+            }
+        }
+
+        async function syncToCloud() {
+            try {
+                await fetch('/session/sync', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ history, summary: currentSummary })
+                });
+            } catch (e) {
+                console.warn("Cloud sync failed:", e);
+            }
+        }
+
+        async function triggerCapture() {
+            // 优先捕获输入框内容，若为空则尝试捕获最后一条发送的消息
+            let text = msgInput.value.trim();
+            if (!text) {
+                text = lastSentContent;
+            }
+
+            if (!text) {
+                alert('请先输入需要捕获的内容，或发送一条消息。');
+                return;
+            }
+
+            typingIndicator.innerText = '正在物理同步...';
+            typingIndicator.style.display = 'block';
+
+            try {
+                const response = await fetch(`/collect`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ content: text, source: 'mobile_chat' })
+                });
+                const data = await response.json();
+                addMessage(`✅ 灵感已同步至云端事实云 (L3)\n摘要：${data.summary}`, 'ai');
+                if (msgInput.value.trim() === text) {
+                    msgInput.value = '';
+                }
+            } catch (err) {
+                alert('捕获失败');
+            } finally {
+                typingIndicator.style.display = 'none';
+                typingIndicator.innerText = 'Sphere 正在思考...';
+            }
+        }
+
+        function addMessage(text, role, smooth = true, historyIndex = null) {
+            // 使用 wrapper 包裹消息和删除按钮
+            const wrapper = document.createElement('div');
+            wrapper.className = `message-wrapper ${role}-wrapper`;
+
+            const div = document.createElement('div');
+            div.className = `message ${role}-message`;
+            div.innerText = text;
+            if (!smooth) div.style.animation = 'none';
+
+            wrapper.appendChild(div);
+
+            // 只有用户消息才显示删除按钮
+            if (role === 'user' && historyIndex !== null) {
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'delete-btn';
+                deleteBtn.innerHTML = '✕';
+                deleteBtn.title = '删除这轮对话';
+                deleteBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    deleteMessage(historyIndex);
+                };
+                wrapper.appendChild(deleteBtn);
+            }
+
+            chatContainer.appendChild(wrapper);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+            return div;
+        }
+
+        async function deleteMessage(index) {
+            if (!confirm('确定删除这轮对话吗？')) return;
+
+            try {
+                const response = await fetch(`/session/message/${index}`, {
+                    method: 'DELETE'
+                });
+                const data = await response.json();
+
+                if (data.status === 'deleted') {
+                    history = data.history;
+                    await renderHistory();
+                    console.log(`[Session] Deleted ${data.count} messages`);
+                } else {
+                    alert('删除失败：' + (data.message || '未知错误'));
+                }
+            } catch (e) {
+                console.error('Delete message failed:', e);
+                alert('删除失败，请检查网络连接');
+            }
+        }
+
+        async function toggleVault() {
+            const vault = document.getElementById('fact-vault');
+            if (vault.style.display === 'block') {
+                vault.style.display = 'none';
+                return;
+            }
+
+            vault.style.display = 'block';
+            const list = document.getElementById('vault-list');
+            list.innerHTML = '正在读取事实云...';
+
+            try {
+                console.log("Fetching facts from /facts ...");
+                const response = await fetch('/facts');
+                console.log("Facts Response Status:", response.status);
+                const facts = await response.json();
+                console.log("Facts Data:", facts);
+
+                if (facts.length === 0) {
+                    list.innerHTML = '<div style="text-align:center; margin-top:50px; opacity:0.5;">宝库尚空，完成 Capture 以归档事实。</div>';
+                    return;
+                }
+
+                list.innerHTML = facts.reverse().map(f => {
+                    const contentStr = f.content || '';
+                    const displayOrigin = contentStr ? `"${contentStr.substring(0, 100)}${contentStr.length > 100 ? '...' : ''}"` : '<em>(自动沉淀事实)</em>';
+                    return `
+                        <div class="fact-item">
+                            <div class="fact-time">${new Date(f.timestamp).toLocaleString()}</div>
+                            <div class="fact-summary">${f.summary || '无摘要'}</div>
+                            <div class="fact-origin">${displayOrigin}</div>
+                        </div>
+                    `;
+                }).join('');
+            } catch (e) {
+                list.innerHTML = '读取失败：' + e.message;
+            }
+        }
+
+        let todos = [];
+
+        async function toggleTodoVault() {
+            const vault = document.getElementById('todo-vault');
+            if (vault.style.display === 'block') {
+                vault.style.display = 'none';
+                return;
+            }
+            vault.style.display = 'block';
+            await loadTodos();
+        }
+
+        async function loadTodos() {
+            try {
+                console.log("Fetching todos from /todos ...");
+                const response = await fetch('/todos');
+                console.log("Todos Response Status:", response.status);
+                todos = await response.json();
+                console.log("Todos Data:", todos);
+                renderTodos();
+            } catch (e) {
+                document.getElementById('todo-list').innerText = '任务加载失败';
+            }
+        }
+
+        function renderTodos() {
+            const list = document.getElementById('todo-list');
+            if (!todos || todos.length === 0) {
+                list.innerHTML = '<div style="text-align:center; margin-top:50px; opacity:0.5;">暂无待办事项。</div>';
+                return;
+            }
+            list.innerHTML = todos.map(t => {
+                const taskText = t.task || (typeof t === 'string' ? t : '未知任务');
+                return `
+                    <div class="todo-item ${t.completed ? 'completed' : ''}">
+                        <input type="checkbox" ${t.completed ? 'checked' : ''} onchange="toggleTodoStatus('${t.id || 'temp'}')">
+                        <span class="todo-text">${taskText}</span>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function toggleTodoStatus(id) {
+            const todo = todos.find(t => t.id === id);
+            if (todo) {
+                todo.completed = !todo.completed;
+                renderTodos();
+                // 同步至服务器
+                try {
+                    await fetch('/todos/sync', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(todos)
+                    });
+                } catch (e) {
+                    console.error("Todo Sync Failed", e);
+                }
+            }
+        }
+
+        function toggleMemoryBar(e) {
+            // 防止点击按钮触发折叠
+            if (e.target.closest('.vault-btn')) return;
+            const bar = document.getElementById('memory-bar');
+            bar.classList.toggle('expanded');
+        }
+
+        // ===== Session Management Functions =====
+        function openSummaryEditor() {
+            const modal = document.getElementById('summary-modal');
+            const textarea = document.getElementById('summary-textarea');
+            textarea.value = currentSummary;
+            modal.classList.add('active');
+        }
+
+        function closeSummaryEditor() {
+            document.getElementById('summary-modal').classList.remove('active');
+        }
+
+        async function saveSummary() {
+            const textarea = document.getElementById('summary-textarea');
+            const newSummary = textarea.value.trim();
+
+            try {
+                const response = await fetch('/session/summary', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ summary: newSummary })
+                });
+                const data = await response.json();
+
+                if (data.status === 'updated') {
+                    currentSummary = newSummary;
+                    memoryContent.innerText = "📝 [动态摘要]:\n" + (currentSummary || "尚无动态摘要");
+                    closeSummaryEditor();
+                    console.log('[Session] Summary saved successfully');
+                } else {
+                    alert('保存失败：' + (data.message || '未知错误'));
+                }
+            } catch (e) {
+                console.error('Save summary failed:', e);
+                alert('保存失败，请检查网络连接');
+            }
+        }
+
+        async function clearSession() {
+            if (!confirm('确定要清空所有对话记录和摘要吗？\n\n此操作不可撤销。')) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/session/clear', {
+                    method: 'DELETE'
+                });
+                const data = await response.json();
+
+                if (data.status === 'cleared') {
+                    history = [];
+                    currentSummary = '';
+                    chatContainer.innerHTML = '<div class="message ai-message">对话已清空。我是你的第二大脑，随时可以开始新的对话。</div>';
+                    memoryContent.innerText = "📝 [动态摘要]:\n尚无动态摘要";
+                    console.log('[Session] Cleared all history');
+                } else {
+                    alert('清空失败：' + (data.message || '未知错误'));
+                }
+            } catch (e) {
+                console.error('Clear session failed:', e);
+                alert('清空失败，请检查网络连接');
+            }
+        }
+
+        msgInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+    </script>
+</body>
+
+</html>

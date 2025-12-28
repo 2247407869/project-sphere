@@ -9,15 +9,18 @@ env/
 
 # Project Specific
 data/
-!data/pinned_facts.json
-!data/todos.json
-!data/facts.json
-!data/sessions.json
-captured_insights/
-.ipynb_checkpoints/
+debug_*.txt
+debug_*.log
+test_*.py
+startup.py
+deploy_to_hf.py
 
 # IDE
 .vscode/
 .idea/
 *.swp
 *.swo
+
+# Deployment
+.DS_Store
+*.log
