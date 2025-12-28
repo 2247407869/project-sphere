@@ -4,10 +4,11 @@
 import json
 import logging
 import os
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from typing import Optional
 
 from src.storage.infinicloud import InfiniCloudStorage
+from src.utils.date_helper import get_current_logical_date, format_logical_date
 from src.utils.config import settings
 
 logger = logging.getLogger(__name__)
@@ -78,30 +79,35 @@ class SphereStorage:
     
     async def save_current_session(self, history: list, summary: str) -> bool:
         """保存当前对话到云端"""
+        logical_date = get_current_logical_date()
         session_data = {
             "history": history,
             "summary": summary,
             "last_updated": datetime.now().isoformat(),
-            "date": date.today().isoformat()
+            "date": format_logical_date(logical_date),
+            "logical_date": format_logical_date(logical_date)  # 明确标记逻辑日期
         }
         
         content = json.dumps(session_data, ensure_ascii=False, indent=2)
-        filename = f"current_session_{date.today().isoformat()}.json"
+        filename = f"current_session_{format_logical_date(logical_date)}.json"
         
         success = await self.current_storage.write_file(filename, content)
         if success:
-            logger.info(f"[SphereStorage] 当前对话已保存到云端: {filename}")
+            logger.info(f"[SphereStorage] 当前对话已保存到云端: {filename} (逻辑日期)")
         return success
     
     async def load_current_session(self) -> dict:
         """从云端加载当前对话"""
-        filename = f"current_session_{date.today().isoformat()}.json"
+        logical_date = get_current_logical_date()
+        
+        # 首先尝试加载当前逻辑日期的session
+        filename = f"current_session_{format_logical_date(logical_date)}.json"
         content = await self.current_storage.read_file(filename)
         
         if content:
             try:
                 data = json.loads(content)
-                logger.info(f"[SphereStorage] 从云端加载当前对话: {filename}")
+                logger.info(f"[SphereStorage] 从云端加载当前对话: {filename} (逻辑日期)")
                 return {
                     "history": data.get("history", []),
                     "summary": data.get("summary", "")
@@ -109,17 +115,39 @@ class SphereStorage:
             except json.JSONDecodeError as e:
                 logger.error(f"[SphereStorage] 解析当前对话失败: {e}")
         
-        # 如果云端没有，尝试从本地加载
+        # 如果当前逻辑日期没有session，尝试加载最近几天的session
+        logger.info("[SphereStorage] 当前逻辑日期没有对话记录，尝试加载最近的session...")
+        for days_back in range(1, 8):  # 尝试最近7天
+            past_logical_date = logical_date - timedelta(days=days_back)
+            past_filename = f"current_session_{format_logical_date(past_logical_date)}.json"
+            past_content = await self.current_storage.read_file(past_filename)
+            
+            if past_content:
+                try:
+                    data = json.loads(past_content)
+                    logger.info(f"[SphereStorage] 从云端加载历史对话: {past_filename} (逻辑日期)")
+                    return {
+                        "history": data.get("history", []),
+                        "summary": data.get("summary", "")
+                    }
+                except json.JSONDecodeError as e:
+                    logger.error(f"[SphereStorage] 解析历史对话失败: {e}")
+                    continue
+        
+        # 如果云端都没有，尝试从本地加载
+        logger.info("[SphereStorage] 云端没有找到任何session，尝试本地加载...")
         return self._load_local_session()
     
     async def clear_current_session(self) -> bool:
         """清空当前对话（仅云端）"""
-        filename = f"current_session_{date.today().isoformat()}.json"
+        logical_date = get_current_logical_date()
+        filename = f"current_session_{format_logical_date(logical_date)}.json"
         empty_data = {
             "history": [],
             "summary": "",
             "last_updated": datetime.now().isoformat(),
-            "date": date.today().isoformat()
+            "date": format_logical_date(logical_date),
+            "logical_date": format_logical_date(logical_date)
         }
         content = json.dumps(empty_data, ensure_ascii=False, indent=2)
         return await self.current_storage.write_file(filename, content)

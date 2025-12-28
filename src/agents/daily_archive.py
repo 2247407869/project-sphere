@@ -4,7 +4,7 @@
 import logging
 import json
 import os
-from datetime import datetime, date
+from src.utils.date_helper import get_current_logical_date, format_logical_date
 from typing import Optional
 from src.storage.sphere_storage import get_sphere_storage
 from src.utils.config import settings
@@ -44,7 +44,7 @@ async def trigger_daily_archive(
     Returns:
         dict: 归档结果
     """
-    today = target_date if target_date else date.today().isoformat()
+    today = target_date if target_date else format_logical_date(get_current_logical_date())
     logger.info(f"[DailyArchive] 开始执行归档任务: {today}...")
     
     storage = get_sphere_storage()
