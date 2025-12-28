@@ -261,7 +261,7 @@ async def api_list_memories():
 @app.get("/debug/status")
 async def debug_status():
     """Debug: 获取系统状态"""
-    from src.utils.date_helper import get_current_logical_date, format_logical_date
+    from src.utils.date_helper import get_current_logical_date, format_logical_date, get_beijing_time
     from src.storage.sphere_storage import get_sphere_storage
     
     storage = get_sphere_storage()
@@ -274,12 +274,16 @@ async def debug_status():
     except:
         memory_count = 0
     
+    beijing_time = get_beijing_time()
+    
     return {
         "logical_date": format_logical_date(get_current_logical_date()),
         "session_count": len(session_data.get("history", [])),
         "summary_length": len(session_data.get("summary", "")),
         "memory_count": memory_count,
-        "system_time": datetime.now().isoformat()
+        "system_time": datetime.now().isoformat(),
+        "beijing_time": beijing_time.isoformat(),
+        "timezone": "Asia/Shanghai (UTC+8)"
     }
 
 @app.post("/debug/archive")

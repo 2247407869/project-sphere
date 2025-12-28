@@ -4,7 +4,7 @@ import logging
 from datetime import datetime, timedelta, date
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from src.agents.daily_archive import trigger_daily_archive
-from src.utils.date_helper import get_current_logical_date, format_logical_date
+from src.utils.date_helper import get_current_logical_date, format_logical_date, get_beijing_time
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +57,18 @@ async def auto_archive_job():
 
 def start_scheduler():
     """启动调度器"""
-    # 每天 03:59 执行（在逻辑日期切换前）
-    scheduler.add_job(auto_archive_job, 'cron', hour=3, minute=59)
+    # 每天北京时间 03:59 执行（在逻辑日期切换前）
+    # 使用 Asia/Shanghai 时区确保使用北京时间
+    from apscheduler.schedulers.asyncio import AsyncIOScheduler
+    import pytz
+    
+    beijing_tz = pytz.timezone('Asia/Shanghai')
+    scheduler.add_job(
+        auto_archive_job, 
+        'cron', 
+        hour=3, 
+        minute=59, 
+        timezone=beijing_tz
+    )
     scheduler.start()
-    logger.info("[Scheduler] 🕒 定时任务调度器已启动 (每天 03:59 执行)")
+    logger.info("[Scheduler] 🕒 定时任务调度器已启动 (每天北京时间 03:59 执行)")
