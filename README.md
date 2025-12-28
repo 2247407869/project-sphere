@@ -8,6 +8,7 @@ sdk_version: 4.32.0
 app_file: app.py
 pinned: false
 license: mit
+short_description: 具有三层记忆架构的AI助手
 ---
 
 # Project Sphere - AI Memory Assistant 🧠
