@@ -250,7 +250,13 @@
 <body>
     <div id="version-tag">V5.4 - OPTIMIZED</div>
     <header>
-        <h1>Project Sphere</h1>
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div></div>
+            <h1>Project Sphere</h1>
+            <button id="debug-toggle" style="background: none; border: 1px solid var(--glass-border); color: var(--text-secondary); padding: 0.3rem 0.6rem; border-radius: 8px; font-size: 0.7rem; cursor: pointer;">
+                Debug
+            </button>
+        </div>
     </header>
 
     <div id="memory-bar" onclick="toggleMemoryBar()">
@@ -263,6 +269,55 @@
     <div id="chat-container">
         <div class="message ai-message">
             欢迎来到 Sphere。我是你的第二大脑，可以随时查阅你的长期记忆。
+        </div>
+    </div>
+
+    <!-- Debug Panel -->
+    <div id="debug-panel" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.9); z-index: 1000; overflow-y: auto;">
+        <div style="max-width: 1200px; margin: 0 auto; padding: 2rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                <h2 style="color: var(--accent-color); margin: 0;">🔧 Debug Panel</h2>
+                <button id="debug-close" style="background: none; border: 1px solid var(--glass-border); color: var(--text-primary); padding: 0.5rem 1rem; border-radius: 8px; cursor: pointer;">
+                    关闭
+                </button>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+                <!-- 左侧：系统状态 -->
+                <div>
+                    <h3 style="color: var(--text-primary); margin-bottom: 1rem;">📊 系统状态</h3>
+                    <div id="debug-status" style="background: rgba(255,255,255,0.05); padding: 1rem; border-radius: 12px; font-family: monospace; font-size: 0.8rem; line-height: 1.6;">
+                        加载中...
+                    </div>
+                    
+                    <h3 style="color: var(--text-primary); margin: 2rem 0 1rem 0;">🧠 M2 摘要内容</h3>
+                    <div id="debug-m2-content" style="background: rgba(255,255,255,0.05); padding: 1rem; border-radius: 12px; font-size: 0.9rem; line-height: 1.6; white-space: pre-wrap;">
+                        加载中...
+                    </div>
+                    
+                    <div style="margin-top: 1rem;">
+                        <button id="debug-archive" style="background: var(--accent-color); border: none; color: white; padding: 0.5rem 1rem; border-radius: 8px; cursor: pointer; margin-right: 0.5rem;">
+                            手动归档
+                        </button>
+                        <button id="debug-clear" style="background: #dc3545; border: none; color: white; padding: 0.5rem 1rem; border-radius: 8px; cursor: pointer;">
+                            清空对话
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- 右侧：M3记忆管理 -->
+                <div>
+                    <h3 style="color: var(--text-primary); margin-bottom: 1rem;">🗃️ M3 长期记忆</h3>
+                    <div id="debug-memories" style="background: rgba(255,255,255,0.05); padding: 1rem; border-radius: 12px; max-height: 400px; overflow-y: auto;">
+                        加载中...
+                    </div>
+                    
+                    <h3 style="color: var(--text-primary); margin: 2rem 0 1rem 0;">📄 记忆内容查看</h3>
+                    <div id="debug-memory-content" style="background: rgba(255,255,255,0.05); padding: 1rem; border-radius: 12px; max-height: 300px; overflow-y: auto; font-size: 0.8rem; line-height: 1.5; white-space: pre-wrap;">
+                        点击上方记忆文件查看内容
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -294,8 +349,14 @@
         // 初始化
         window.onload = async () => {
             console.log("[Frontend] V5.4 Optimized Version Loaded");
+            await loadSessionData();
+        };
+
+        async function loadSessionData() {
             try {
-                const response = await fetch('/session/load');
+                // 添加时间戳防止缓存
+                const timestamp = new Date().getTime();
+                const response = await fetch(`/session/load?t=${timestamp}`);
                 const data = await response.json();
                 history = data.history || [];
                 currentSummary = data.summary || '';
@@ -306,7 +367,7 @@
                 history = [];
                 currentSummary = '';
             }
-        };
+        }
 
         async function renderHistory() {
             chatContainer.innerHTML = '';
@@ -535,6 +596,102 @@
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
                 sendMessage();
+            }
+        });
+
+        // Debug Panel 功能
+        let debugPanelOpen = false;
+
+        document.getElementById('debug-toggle').addEventListener('click', () => {
+            debugPanelOpen = !debugPanelOpen;
+            const panel = document.getElementById('debug-panel');
+            panel.style.display = debugPanelOpen ? 'block' : 'none';
+            
+            if (debugPanelOpen) {
+                loadDebugData();
+            }
+        });
+
+        document.getElementById('debug-close').addEventListener('click', () => {
+            debugPanelOpen = false;
+            document.getElementById('debug-panel').style.display = 'none';
+        });
+
+        async function loadDebugData() {
+            try {
+                // 加载系统状态
+                const statusResponse = await fetch('/debug/status');
+                const statusData = await statusResponse.json();
+                document.getElementById('debug-status').innerHTML = `
+                    <div>📅 当前逻辑日期: ${statusData.logical_date || 'N/A'}</div>
+                    <div>💬 对话记录数: ${statusData.session_count || 0}</div>
+                    <div>📝 M2摘要长度: ${statusData.summary_length || 0} 字符</div>
+                    <div>🗃️ M3记忆文件: ${statusData.memory_count || 0} 个</div>
+                    <div>⏰ 系统时间: ${new Date().toLocaleString()}</div>
+                `;
+
+                // 加载M2摘要内容
+                document.getElementById('debug-m2-content').textContent = currentSummary || '暂无摘要内容';
+
+                // 加载M3记忆列表
+                const memoriesResponse = await fetch('/memory/list');
+                const memoriesData = await memoriesResponse.json();
+                const memoriesHtml = memoriesData.memories.map(memory => 
+                    `<div style="padding: 0.5rem; margin: 0.3rem 0; background: rgba(255,255,255,0.1); border-radius: 8px; cursor: pointer;" onclick="loadMemoryContent('${memory.filename}')">
+                        📄 ${memory.filename}
+                        <div style="font-size: 0.7rem; color: var(--text-secondary); margin-top: 0.2rem;">
+                            ${memory.last_accessed || '未访问'} | ${memory.size || 0} 字符
+                        </div>
+                    </div>`
+                ).join('');
+                document.getElementById('debug-memories').innerHTML = memoriesHtml || '<div style="color: var(--text-secondary);">暂无记忆文件</div>';
+
+            } catch (e) {
+                console.error('Failed to load debug data:', e);
+            }
+        }
+
+        async function loadMemoryContent(filename) {
+            try {
+                const response = await fetch('/memory/read', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ filename })
+                });
+                const data = await response.json();
+                document.getElementById('debug-memory-content').textContent = data.content || '无内容';
+            } catch (e) {
+                console.error('Failed to load memory content:', e);
+                document.getElementById('debug-memory-content').textContent = '加载失败';
+            }
+        }
+
+        // Debug按钮事件
+        document.getElementById('debug-archive').addEventListener('click', async () => {
+            try {
+                const response = await fetch('/debug/archive', { method: 'POST' });
+                const result = await response.json();
+                alert(`归档完成: ${result.message || '成功'}`);
+                loadDebugData(); // 刷新数据
+            } catch (e) {
+                alert('归档失败: ' + e.message);
+            }
+        });
+
+        document.getElementById('debug-clear').addEventListener('click', async () => {
+            if (!confirm('确定要清空所有对话记录吗？此操作不可恢复。')) return;
+            
+            try {
+                const response = await fetch('/session/clear', { method: 'DELETE' });
+                if (response.ok) {
+                    history = [];
+                    currentSummary = '';
+                    await renderHistory();
+                    alert('对话记录已清空');
+                    loadDebugData(); // 刷新数据
+                }
+            } catch (e) {
+                alert('清空失败: ' + e.message);
             }
         });
     </script>

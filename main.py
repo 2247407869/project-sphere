@@ -258,6 +258,51 @@ async def api_list_memories():
     files = await list_available_memories()
     return {"files": files}
 
+@app.get("/debug/status")
+async def debug_status():
+    """Debug: 获取系统状态"""
+    from src.utils.date_helper import get_current_logical_date, format_logical_date
+    from src.storage.sphere_storage import get_sphere_storage
+    
+    storage = get_sphere_storage()
+    session_data = await storage.load_current_session()
+    
+    # 获取记忆文件数量
+    try:
+        memories_response = await list_available_memories()
+        memory_count = len(memories_response.get("memories", []))
+    except:
+        memory_count = 0
+    
+    return {
+        "logical_date": format_logical_date(get_current_logical_date()),
+        "session_count": len(session_data.get("history", [])),
+        "summary_length": len(session_data.get("summary", "")),
+        "memory_count": memory_count,
+        "system_time": datetime.now().isoformat()
+    }
+
+@app.post("/debug/archive")
+async def debug_archive():
+    """Debug: 手动触发归档"""
+    try:
+        from src.storage.sphere_storage import get_sphere_storage
+        storage = get_sphere_storage()
+        session_data = await storage.load_current_session()
+        
+        if not session_data.get("history"):
+            return {"status": "skipped", "message": "没有对话记录需要归档"}
+        
+        result = await do_daily_archive(
+            session_history=session_data["history"],
+            current_m2=session_data.get("summary", "")
+        )
+        
+        return {"status": "success", "message": f"归档完成: {result.get('archive_file', 'N/A')}"}
+    except Exception as e:
+        logger.error(f"Debug归档失败: {e}")
+        return {"status": "error", "message": str(e)}
+
 @app.get("/memory/tools")
 async def api_get_memory_tools():
     """获取记忆工具定义 (供前端 Function Calling 使用)"""
