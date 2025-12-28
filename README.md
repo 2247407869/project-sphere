@@ -6,7 +6,7 @@ colorTo: purple
 sdk: docker
 pinned: false
 license: mit
-short_description: 具有三层记忆架构的AI助手 - 智能记忆管理系统
+short_description: 具有三层记忆架构的AI助手 - 智能记忆管理系统 v2.0
 ---
 
 # Project Sphere - AI Memory Assistant 🧠
