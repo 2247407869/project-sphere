@@ -255,8 +255,24 @@ async def api_delete_memory(req: DeleteMemoryRequest):
 @app.get("/memory/list")
 async def api_list_memories():
     """列出可用的记忆文件"""
-    files = await list_available_memories()
-    return {"files": files}
+    try:
+        files = await list_available_memories()
+        # 返回更详细的格式，兼容前端期望
+        memories = []
+        for filename in files:
+            memories.append({
+                "filename": filename,
+                "last_accessed": "未知",
+                "size": 0
+            })
+        
+        return {
+            "memories": memories,
+            "files": files  # 保持向后兼容
+        }
+    except Exception as e:
+        logger.error(f"Failed to list memories: {e}")
+        return {"memories": [], "files": []}
 
 @app.get("/debug/status")
 async def debug_status():
