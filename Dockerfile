@@ -13,7 +13,6 @@ ENV DEBUG=false
 # 安装系统依赖
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
-    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # 复制依赖文件并安装
@@ -29,10 +28,6 @@ RUN mkdir -p data logs
 
 # 暴露端口 (Hugging Face Spaces 默认 7860)
 EXPOSE 7860
-
-# 健康检查
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:${PORT:-7860}/health || exit 1
 
 # 启动应用
 CMD ["python", "app.py"]
