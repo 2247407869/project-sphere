@@ -653,10 +653,18 @@
                         { filename: memory, last_accessed: '未知', size: 0 } : 
                         memory;
                     
+                    // 格式化文件大小
+                    const formatSize = (bytes) => {
+                        if (bytes === 0) return '空文件';
+                        if (bytes < 1024) return `${bytes} 字符`;
+                        if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)}K 字符`;
+                        return `${(bytes / (1024 * 1024)).toFixed(1)}M 字符`;
+                    };
+                    
                     return `<div style="padding: 0.5rem; margin: 0.3rem 0; background: rgba(255,255,255,0.1); border-radius: 8px; cursor: pointer;" onclick="loadMemoryContent('${memoryObj.filename}')">
                         📄 ${memoryObj.filename}
                         <div style="font-size: 0.7rem; color: var(--text-secondary); margin-top: 0.2rem;">
-                            ${memoryObj.last_accessed || '未访问'} | ${memoryObj.size || 0} 字符
+                            ${memoryObj.last_accessed || '未访问'} | ${formatSize(memoryObj.size || 0)}
                         </div>
                     </div>`;
                 }).join('');

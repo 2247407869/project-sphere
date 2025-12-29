@@ -256,23 +256,43 @@ async def api_delete_memory(req: DeleteMemoryRequest):
 async def api_list_memories():
     """列出可用的记忆文件"""
     try:
+        from src.storage.sphere_storage import get_sphere_storage
+        storage = get_sphere_storage()
+        
         files = await list_available_memories()
-        # 返回更详细的格式，兼容前端期望
         memories = []
+        
         for filename in files:
-            memories.append({
-                "filename": filename,
-                "last_accessed": "未知",
-                "size": 0
-            })
+            # 获取文件的详细信息
+            try:
+                content = await storage.read_memory_file(filename)
+                size = len(content) if content else 0
+                
+                # 尝试获取文件的访问时间（从WebDAV或本地）
+                # 这里可以扩展获取更详细的元数据
+                last_accessed = "最近访问"  # 暂时使用占位符
+                
+                memories.append({
+                    "filename": filename,
+                    "last_accessed": last_accessed,
+                    "size": size
+                })
+            except Exception as e:
+                logger.warning(f"Failed to get info for {filename}: {e}")
+                memories.append({
+                    "filename": filename,
+                    "last_accessed": "未知",
+                    "size": 0
+                })
         
         return {
             "memories": memories,
-            "files": files  # 保持向后兼容
+            "files": files,  # 保持向后兼容
+            "count": len(memories)
         }
     except Exception as e:
         logger.error(f"Failed to list memories: {e}")
-        return {"memories": [], "files": []}
+        return {"memories": [], "files": [], "count": 0}
 
 @app.get("/debug/status")
 async def debug_status():
@@ -285,8 +305,8 @@ async def debug_status():
     
     # 获取记忆文件数量
     try:
-        memories_response = await list_available_memories()
-        memory_count = len(memories_response.get("memories", []))
+        memories_response = await api_list_memories()
+        memory_count = memories_response.get("count", len(memories_response.get("memories", [])))
     except:
         memory_count = 0
     
