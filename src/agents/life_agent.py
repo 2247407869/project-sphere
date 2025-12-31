@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 # 使用 LLM 进行字段决策
 llm = ChatOpenAI(
     model="deepseek-chat", 
-    api_key=settings.DEEPSEEK_API_KEY, 
+    api_key=settings.DEEPSEEK_API_KEY or "EMPTY", 
     base_url=settings.DEEPSEEK_BASE_URL,
     temperature=0
 )

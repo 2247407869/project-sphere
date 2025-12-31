@@ -1,0 +1,21 @@
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    import main; print('Imported main')
+    ^^^^^^^^^^^
+  File "C:\Users\22474\obsidian\project_code\project-sphere-new\main.py", line 21, in <module>
+    from src.utils.scheduler import start_scheduler
+  File "C:\Users\22474\obsidian\project_code\project-sphere-new\src\utils\scheduler.py", line 6, in <module>
+    from src.agents.daily_archive import trigger_daily_archive
+  File "C:\Users\22474\obsidian\project_code\project-sphere-new\src\agents\daily_archive.py", line 11, in <module>
+    from src.agents.memory_patcher import detect_memory_updates, apply_memory_patch
+  File "C:\Users\22474\obsidian\project_code\project-sphere-new\src\agents\memory_patcher.py", line 12, in <module>
+    llm = ChatOpenAI(
+        model="deepseek-chat",
+    ...<2 lines>...
+        temperature=0.0  # 使用 0 温度以确保精确性
+    )
+  File "C:\Users\22474\AppData\Local\Programs\Python\Python313\Lib\site-packages\pydantic\v1\main.py", line 347, in __init__
+    raise validation_error
+pydantic.v1.error_wrappers.ValidationError: 1 validation error for ChatOpenAI
+__root__
+  Did not find openai_api_key, please add an environment variable `OPENAI_API_KEY` which contains it, or pass `openai_api_key` as a named parameter. (type=value_error)

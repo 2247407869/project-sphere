@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 # LLM 实例
 llm = ChatOpenAI(
     model="deepseek-chat",
-    api_key=settings.DEEPSEEK_API_KEY,
+    api_key=settings.DEEPSEEK_API_KEY or "EMPTY",
     base_url=settings.DEEPSEEK_BASE_URL,
     temperature=0.3
 )

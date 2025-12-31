@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 # 分发器使用 LLM 进行语义分类
 llm = ChatOpenAI(
     model="deepseek-chat", 
-    api_key=settings.DEEPSEEK_API_KEY, 
+    api_key=settings.DEEPSEEK_API_KEY or "EMPTY", 
     base_url=settings.DEEPSEEK_BASE_URL,
     temperature=0
 )
