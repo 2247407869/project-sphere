@@ -11,10 +11,10 @@ import json
 logger = logging.getLogger(__name__)
 
 # 初始化大语言模型驱动 (DeepSeek 适配版)
-# 普通对话模型
+# 使用 "EMPTY" 占位符允许系统在无 Key 状态下启动，仅在实际调用时报错
 llm = ChatOpenAI(
     model="deepseek-chat", 
-    api_key=settings.DEEPSEEK_API_KEY, 
+    api_key=settings.DEEPSEEK_API_KEY or "EMPTY", 
     base_url=settings.DEEPSEEK_BASE_URL,
     temperature=0
 )
@@ -22,17 +22,16 @@ llm = ChatOpenAI(
 # 推理模型 (R1) - 用于需要深度思考的任务
 llm_reasoner = ChatOpenAI(
     model="deepseek-reasoner",
-    api_key=settings.DEEPSEEK_API_KEY,
+    api_key=settings.DEEPSEEK_API_KEY or "EMPTY",
     base_url=settings.DEEPSEEK_BASE_URL,
     temperature=0,
     streaming=True
 )
 
 # 2025.12.31 最新视觉模型 (Gemini 3 Flash)
-# 推荐使用 OpenAI 兼容 API 以保持架构一致性
 llm_vision = ChatOpenAI(
     model="gemini-3-flash", 
-    api_key=settings.GOOGLE_API_KEY,
+    api_key=settings.GOOGLE_API_KEY or "EMPTY",
     base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
     temperature=0
 )

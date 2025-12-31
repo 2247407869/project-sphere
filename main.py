@@ -490,6 +490,10 @@ async def chat_with_agent(req: ChatRequest):
         
         # 多模态路由：如果有图片，则使用 Gemini 3 Flash 进行视觉分析
         if req.images:
+            if not settings.GOOGLE_API_KEY or settings.GOOGLE_API_KEY == "EMPTY":
+                yield "event: content\ndata: ❌ 检测到图片输入，但系统未配置 `GOOGLE_API_KEY`。请在环境变量或 `.env` 中添加该密钥以激活视觉分析功能。\n\n"
+                return
+            
             yield "event: status\ndata: 📸 正在使用 Gemini 3 Flash 进行视觉分析...\n\n"
             async for chunk in llm_vision.astream(messages):
                 full_content += chunk.content
