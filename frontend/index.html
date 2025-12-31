@@ -100,8 +100,9 @@
         }
 
         #memory-bar.expanded {
-            max-height: 300px;
+            max-height: 40vh;
             overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
         }
 
         #memory-bar:hover {
@@ -245,6 +246,46 @@
             display: block !important;
         }
 
+        /* Image Upload */
+        .image-preview-container {
+            display: none;
+            gap: 10px;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            margin-bottom: 10px;
+            overflow-x: auto;
+        }
+
+        .preview-item {
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        .preview-item img {
+            width: 60px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 8px;
+            border: 1px solid var(--accent-color);
+        }
+
+        .remove-img {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: #dc3545;
+            color: white;
+            border-radius: 50%;
+            width: 18px;
+            height: 18px;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
         /* Debug Button */
         #debug-toggle:hover {
             background: var(--accent-color) !important;
@@ -260,7 +301,8 @@
         <div style="display: flex; justify-content: space-between; align-items: center;">
             <div></div>
             <h1>Project Sphere</h1>
-            <button id="debug-toggle" style="background: rgba(255,255,255,0.1); border: 1px solid var(--accent-color); color: var(--accent-color); padding: 0.4rem 0.8rem; border-radius: 8px; font-size: 0.75rem; cursor: pointer; transition: all 0.3s ease;">
+            <button id="debug-toggle"
+                style="background: rgba(255,255,255,0.1); border: 1px solid var(--accent-color); color: var(--accent-color); padding: 0.4rem 0.8rem; border-radius: 8px; font-size: 0.75rem; cursor: pointer; transition: all 0.3s ease;">
                 🔧 Debug
             </button>
         </div>
@@ -280,47 +322,55 @@
     </div>
 
     <!-- Debug Panel -->
-    <div id="debug-panel" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.9); z-index: 1000; overflow-y: auto;">
+    <div id="debug-panel"
+        style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.9); z-index: 1000; overflow-y: auto;">
         <div style="max-width: 1200px; margin: 0 auto; padding: 2rem;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
                 <h2 style="color: var(--accent-color); margin: 0;">🔧 Debug Panel</h2>
-                <button id="debug-close" style="background: none; border: 1px solid var(--glass-border); color: var(--text-primary); padding: 0.5rem 1rem; border-radius: 8px; cursor: pointer;">
+                <button id="debug-close"
+                    style="background: none; border: 1px solid var(--glass-border); color: var(--text-primary); padding: 0.5rem 1rem; border-radius: 8px; cursor: pointer;">
                     关闭
                 </button>
             </div>
-            
+
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
                 <!-- 左侧：系统状态 -->
                 <div>
                     <h3 style="color: var(--text-primary); margin-bottom: 1rem;">📊 系统状态</h3>
-                    <div id="debug-status" style="background: rgba(255,255,255,0.05); padding: 1rem; border-radius: 12px; font-family: monospace; font-size: 0.8rem; line-height: 1.6;">
+                    <div id="debug-status"
+                        style="background: rgba(255,255,255,0.05); padding: 1rem; border-radius: 12px; font-family: monospace; font-size: 0.8rem; line-height: 1.6;">
                         加载中...
                     </div>
-                    
+
                     <h3 style="color: var(--text-primary); margin: 2rem 0 1rem 0;">🧠 M2 摘要内容</h3>
-                    <div id="debug-m2-content" style="background: rgba(255,255,255,0.05); padding: 1rem; border-radius: 12px; font-size: 0.9rem; line-height: 1.6; white-space: pre-wrap;">
+                    <div id="debug-m2-content"
+                        style="background: rgba(255,255,255,0.05); padding: 1rem; border-radius: 12px; font-size: 0.9rem; line-height: 1.6; white-space: pre-wrap;">
                         加载中...
                     </div>
-                    
+
                     <div style="margin-top: 1rem;">
-                        <button id="debug-archive" style="background: var(--accent-color); border: none; color: white; padding: 0.5rem 1rem; border-radius: 8px; cursor: pointer; margin-right: 0.5rem;">
+                        <button id="debug-archive"
+                            style="background: var(--accent-color); border: none; color: white; padding: 0.5rem 1rem; border-radius: 8px; cursor: pointer; margin-right: 0.5rem;">
                             手动归档
                         </button>
-                        <button id="debug-clear" style="background: #dc3545; border: none; color: white; padding: 0.5rem 1rem; border-radius: 8px; cursor: pointer;">
+                        <button id="debug-clear"
+                            style="background: #dc3545; border: none; color: white; padding: 0.5rem 1rem; border-radius: 8px; cursor: pointer;">
                             清空对话
                         </button>
                     </div>
                 </div>
-                
+
                 <!-- 右侧：M3记忆管理 -->
                 <div>
                     <h3 style="color: var(--text-primary); margin-bottom: 1rem;">🗃️ M3 长期记忆</h3>
-                    <div id="debug-memories" style="background: rgba(255,255,255,0.05); padding: 1rem; border-radius: 12px; max-height: 400px; overflow-y: auto;">
+                    <div id="debug-memories"
+                        style="background: rgba(255,255,255,0.05); padding: 1rem; border-radius: 12px; max-height: 400px; overflow-y: auto;">
                         加载中...
                     </div>
-                    
+
                     <h3 style="color: var(--text-primary); margin: 2rem 0 1rem 0;">📄 记忆内容查看</h3>
-                    <div id="debug-memory-content" style="background: rgba(255,255,255,0.05); padding: 1rem; border-radius: 12px; max-height: 300px; overflow-y: auto; font-size: 0.8rem; line-height: 1.5; white-space: pre-wrap;">
+                    <div id="debug-memory-content"
+                        style="background: rgba(255,255,255,0.05); padding: 1rem; border-radius: 12px; max-height: 300px; overflow-y: auto; font-size: 0.8rem; line-height: 1.5; white-space: pre-wrap;">
                         点击上方记忆文件查看内容
                     </div>
                 </div>
@@ -329,8 +379,12 @@
     </div>
 
     <div class="input-area">
+        <div id="image-preview" class="image-preview-container"></div>
         <div class="action-row">
             <span id="typing-indicator" class="typing">Sphere 正在思考...</span>
+            <input type="file" id="file-input" accept="image/*" style="display: none;"
+                onchange="handleFileSelect(event)">
+            <button class="session-btn" onclick="document.getElementById('file-input').click()">🖼️ 图片</button>
         </div>
         <div class="input-row">
             <textarea id="msg-input" placeholder="输入灵感或问题..."></textarea>
@@ -351,7 +405,39 @@
         const memoryContent = document.getElementById('memory-content');
         let history = [];
         let currentSummary = '';
-        let isProcessing = false; // 防止重复发送
+        let selectedImages = [];
+
+        function handleFileSelect(event) {
+            const files = event.target.files;
+            const preview = document.getElementById('image-preview');
+            preview.style.display = 'flex';
+
+            for (let file of files) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const base64 = e.target.result;
+                    selectedImages.push(base64);
+
+                    const div = document.createElement('div');
+                    div.className = 'preview-item';
+                    div.innerHTML = `
+                        <img src="${base64}">
+                        <div class="remove-img" onclick="removeImage(${selectedImages.length - 1}, this)">×</div>
+                    `;
+                    preview.appendChild(div);
+                };
+                reader.readAsDataURL(file);
+            }
+            event.target.value = ''; // 重置以允许重复选择
+        }
+
+        function removeImage(index, el) {
+            selectedImages.splice(index, 1);
+            el.parentElement.remove();
+            if (selectedImages.length === 0) {
+                document.getElementById('image-preview').style.display = 'none';
+            }
+        }
 
         // 初始化
         window.onload = async () => {
@@ -403,7 +489,7 @@
 
         async function sendMessage() {
             if (isProcessing) return;
-            
+
             const text = msgInput.value.trim();
             if (!text) return;
 
@@ -418,10 +504,16 @@
 
             const payload = {
                 message: text,
+                images: selectedImages, // 注入多模态数据
                 history: history.slice(0, -1),
                 summary: currentSummary,
-                auto_save: true  // 确保自动保存对话
+                auto_save: true
             };
+
+            // 发送后清空图片（注意：在 finally 中清空可能更稳健，但在流开始时清空可防止重复发送）
+            selectedImages = [];
+            document.getElementById('image-preview').innerHTML = '';
+            document.getElementById('image-preview').style.display = 'none';
 
             console.log("[Frontend] Sending payload:", payload);
 
@@ -452,14 +544,14 @@
                         completed = true;
                         hideTyping();
                         isProcessing = false;
-                        reader.cancel().catch(() => {});
+                        reader.cancel().catch(() => { });
                     }
                 }, 45000);
 
                 try {
                     while (!completed) {
                         const { done, value } = await reader.read();
-                        
+
                         if (done) {
                             console.log("[Stream] Reader done");
                             completed = true;
@@ -468,18 +560,18 @@
 
                         const chunk = decoder.decode(value, { stream: true });
                         buffer += chunk;
-                        
+
                         // 按双换行符分割完整的事件
                         const events = buffer.split('\n\n');
                         buffer = events.pop() || "";
-                        
+
                         for (const event of events) {
                             if (!event.trim()) continue;
-                            
+
                             const lines = event.split('\n');
                             let eventType = '';
                             let eventData = '';
-                            
+
                             // 解析事件 - 正确处理多行data
                             for (let i = 0; i < lines.length; i++) {
                                 const line = lines[i];
@@ -500,9 +592,9 @@
                                     break;
                                 }
                             }
-                            
+
                             console.log("[Stream] Event:", eventType, "Data length:", eventData.length);
-                            
+
                             // 处理不同类型的事件
                             if (eventType === 'status' && !completed) {
                                 if (eventData.includes('正在查阅记忆')) {
@@ -536,9 +628,12 @@
                             }
                         }
 
-                        // 自动滚动
-                        chatContainer.scrollTop = chatContainer.scrollHeight;
-                        
+                        // 智能滚动：只有当用户本来就在底部附近时，才随新内容滚动
+                        const isAtBottom = chatContainer.scrollHeight - chatContainer.scrollTop - chatContainer.clientHeight < 100;
+                        if (isAtBottom) {
+                            chatContainer.scrollTop = chatContainer.scrollHeight;
+                        }
+
                         if (completed) break;
                     }
                 } catch (readError) {
@@ -547,7 +642,7 @@
                 }
 
                 clearTimeout(timeoutId);
-                
+
                 // 最终处理
                 console.log("[Stream] Final processing, actualContent length:", actualContent.length);
                 if (actualContent.trim()) {
@@ -579,19 +674,19 @@
 
         async function clearSession() {
             if (!confirm('确定要清空所有对话记录吗？')) return;
-            
+
             try {
                 // 清空云端session
                 await fetch('/session/clear', { method: 'DELETE' });
-                
+
                 // 清空本地状态
                 history = [];
                 currentSummary = '';
-                
+
                 // 清空界面
                 chatContainer.innerHTML = '<div class="message ai-message">对话已清空。我是你的第二大脑，随时可以开始新的对话。</div>';
                 memoryContent.innerText = "📝 [动态摘要]:\n尚无动态摘要";
-                
+
                 console.log("[Session] 对话已清空（云端+本地）");
             } catch (e) {
                 console.error("清空失败:", e);
@@ -613,7 +708,7 @@
             debugPanelOpen = !debugPanelOpen;
             const panel = document.getElementById('debug-panel');
             panel.style.display = debugPanelOpen ? 'block' : 'none';
-            
+
             if (debugPanelOpen) {
                 loadDebugData();
             }
@@ -633,6 +728,7 @@
                     <div>📅 当前逻辑日期: ${statusData.logical_date || 'N/A'}</div>
                     <div>💬 对话记录数: ${statusData.session_count || 0}</div>
                     <div>📝 M2摘要长度: ${statusData.summary_length || 0} 字符</div>
+                    <div style="color: var(--accent-color); font-weight: bold;">📏 总上下文长度: ${statusData.total_context_length || 0} (字符估算)</div>
                     <div>🗃️ M3记忆文件: ${statusData.memory_count || 0} 个</div>
                     <div>⏰ 系统时间: ${new Date().toLocaleString()}</div>
                 `;
@@ -643,16 +739,16 @@
                 // 加载M3记忆列表
                 const memoriesResponse = await fetch('/memory/list');
                 const memoriesData = await memoriesResponse.json();
-                
+
                 // 处理API返回格式：可能是 {files: [...]} 或 {memories: [...]}
                 const memories = memoriesData.memories || memoriesData.files || [];
-                
+
                 const memoriesHtml = memories.map(memory => {
                     // 如果是字符串，转换为对象格式
-                    const memoryObj = typeof memory === 'string' ? 
-                        { filename: memory, last_accessed: '未知', size: 0 } : 
+                    const memoryObj = typeof memory === 'string' ?
+                        { filename: memory, last_accessed: '未知', size: 0 } :
                         memory;
-                    
+
                     // 格式化文件大小
                     const formatSize = (bytes) => {
                         if (bytes === 0) return '空文件';
@@ -660,7 +756,7 @@
                         if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)}K 字符`;
                         return `${(bytes / (1024 * 1024)).toFixed(1)}M 字符`;
                     };
-                    
+
                     return `<div style="padding: 0.5rem; margin: 0.3rem 0; background: rgba(255,255,255,0.1); border-radius: 8px; cursor: pointer;" onclick="loadMemoryContent('${memoryObj.filename}')">
                         📄 ${memoryObj.filename}
                         <div style="font-size: 0.7rem; color: var(--text-secondary); margin-top: 0.2rem;">
@@ -668,7 +764,7 @@
                         </div>
                     </div>`;
                 }).join('');
-                
+
                 document.getElementById('debug-memories').innerHTML = memoriesHtml || '<div style="color: var(--text-secondary);">暂无记忆文件</div>';
 
             } catch (e) {
@@ -705,7 +801,7 @@
 
         document.getElementById('debug-clear').addEventListener('click', async () => {
             if (!confirm('确定要清空所有对话记录吗？此操作不可恢复。')) return;
-            
+
             try {
                 const response = await fetch('/session/clear', { method: 'DELETE' });
                 if (response.ok) {

@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: Optional[str] = None
     DEEPSEEK_API_KEY: Optional[str] = None
     DEEPSEEK_BASE_URL: str = "https://api.deepseek.com"
+    GOOGLE_API_KEY: Optional[str] = None
 
     # InfiniCloud 存储目录配置
     INFINICLOUD_MEMORY_DIR: str = "/obsidian/mem"          # 长期记忆文件

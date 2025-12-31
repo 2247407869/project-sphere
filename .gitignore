@@ -11,7 +11,7 @@ env/
 data/
 debug_*.txt
 debug_*.log
-test_*.py
+# test_*.py (注释掉以允许 integration tests)
 startup.py
 deploy_to_hf.py
 

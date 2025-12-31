@@ -1,0 +1,34 @@
+# Project Sphere 设计文档 (DESIGN.md)
+
+## 1. 系统愿景
+Project Sphere 旨在打造一个“主权、理性、高性能”的个人第二大脑。它不仅是一个对话机器人，更是一个具备多层记忆整合能力的 AI 助手。
+
+## 2. 三层记忆架构 (Triple Memory Architecture)
+
+### M1: 工作记忆 (Working Memory)
+- **定义**：当前对话的 Context。
+- **载体**：HTTP 请求中的 `history` 数组。
+- **特性**：高实时性，由 WebDAV 自动同步。
+
+### M2: 动态摘要 (Dynamic Summary)
+- **定义**：对过往对话内容的“语义压缩”。
+- **逻辑**：随着对话长度增加，老的 M1 内容被压缩为 M2 摘要，注入 System Prompt。
+- **价值**：在有限的 Context Window 内保持长期对话的连贯性。
+
+### M3: 长期记忆 (Long-term Memory)
+- **定义**：持久化的 Markdown 知识库（如：职业规划、财务资产、健康管理等）。
+- **交互**：模型通过 `fetch_memory` 工具按需检索。基于语义查询（Keyword/Title）按需挂载。
+
+## 3. 多模态视觉层 [New 2025.12]
+- **引擎**：Gemini 3 Flash。
+- **触发**：当前端传入 `images` 负载时，系统自动路由至 Gemini 视觉引擎。
+- **ROI 考量**：针对视觉任务，Gemini 3 Flash 提供了一流的性能损耗比与长文本处理能力。
+
+## 4. 技术栈
+- **后端**：FastAPI + LangChain + LangGraph。
+- **前端**：Vanilla HTML/JS/CSS (追求极致响应与零依赖)。
+- **存储**：InfiniCloud WebDAV (个人隐私主权)。
+- **模型**：DeepSeek (文本/思考) + Gemini (视觉)。
+
+---
+*Created by Antigravity on 2025-12-31*

@@ -16,7 +16,7 @@ from fastapi.staticfiles import StaticFiles
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from pydantic import BaseModel
 
-from src.agents.knowledge_agent import llm
+from src.agents.knowledge_agent import llm, llm_vision
 from src.utils.config import settings
 from src.utils.scheduler import start_scheduler
 
@@ -54,9 +54,10 @@ class CollectRequest(BaseModel):
 
 class ChatRequest(BaseModel):
     message: str
+    images: list = [] # 新增多模态支持
     history: list = []
-    summary: str = ""  # 当前对话的滚动摘要
-    auto_save: bool = True  # 是否自动保存会话（测试时可设为 False）
+    summary: str = ""
+    auto_save: bool = True
 
 # 配置 CORS 跨域支持 (允许移动端 Web 访问)
 app.add_middleware(
@@ -312,10 +313,16 @@ async def debug_status():
     
     beijing_time = get_beijing_time()
     
+    # 计算总上下文约略 Token/字符数
+    total_text = (session_data.get("summary", "") + 
+                  "".join([m.get("content", "") for m in session_data.get("history", [])]))
+    token_estimate = len(total_text) # 简易估算：1字符约等于1token或更少
+    
     return {
         "logical_date": format_logical_date(get_current_logical_date()),
         "session_count": len(session_data.get("history", [])),
         "summary_length": len(session_data.get("summary", "")),
+        "total_context_length": token_estimate,
         "memory_count": memory_count,
         "system_time": datetime.now().isoformat(),
         "beijing_time": beijing_time.isoformat(),
@@ -417,15 +424,27 @@ def build_system_prompt(summary: str, memory_files: list) -> str:
     logger.info(f"[DEBUG] System prompt built: {system_content[:200]}...")
     return system_content
 
-def build_messages(system_content: str, history: list, current_message: str) -> list:
-    """构建消息列表"""
+def build_messages(system_content: str, history: list, current_message: str, images: list = None) -> list:
+    """构建消息列表 (支持多模态)"""
     messages = [SystemMessage(content=system_content)]
     for h in history:
         if h["role"] == "user":
             messages.append(HumanMessage(content=h["content"]))
         else:
             messages.append(AIMessage(content=h["content"]))
-    messages.append(HumanMessage(content=current_message))
+    
+    # 构建当前用户消息
+    if images:
+        content = [{"type": "text", "text": current_message}]
+        for img_base64 in images:
+            # 兼容 Data URL 格式
+            content.append({
+                "type": "image_url",
+                "image_url": {"url": img_base64}
+            })
+        messages.append(HumanMessage(content=content))
+    else:
+        messages.append(HumanMessage(content=current_message))
     return messages
 
 def save_session_if_needed(auto_save: bool, history: list, summary: str) -> None:
@@ -467,7 +486,28 @@ async def chat_with_agent(req: ChatRequest):
         from src.agents.memory_tools import list_available_memories
         memory_files = await list_available_memories()
         system_content = build_system_prompt(req.summary, memory_files)
-        messages = build_messages(system_content, req.history, req.message)
+        messages = build_messages(system_content, req.history, req.message, req.images)
+        
+        # 多模态路由：如果有图片，则使用 Gemini 3 Flash 进行视觉分析
+        if req.images:
+            yield "event: status\ndata: 📸 正在使用 Gemini 3 Flash 进行视觉分析...\n\n"
+            async for chunk in llm_vision.astream(messages):
+                full_content += chunk.content
+                # 转换换行符以适应 SSE 格式
+                content_lines = chunk.content.split('\n')
+                if len(content_lines) == 1:
+                    yield f"event: content\ndata: {chunk.content}\n\n"
+                else:
+                    sse_content = "event: content\n"
+                    for line in content_lines:
+                        sse_content += f"data: {line}\n"
+                    sse_content += "\n"
+                    yield sse_content
+            
+            # 直接跳到会话保存阶段
+            save_session_if_needed(req.auto_save, req.history + [{"role": "user", "content": req.message}, {"role": "ai", "content": full_content}], req.summary)
+            yield f"event: metadata\ndata: {json.dumps({'summary': req.summary, 'history': req.history + [{'role': 'user', 'content': req.message}, {'role': 'ai', 'content': full_content}]}, ensure_ascii=False)}\n\n"
+            return
         
         # 日志追踪
         logger.info(f">>> [System Prompt Context]:\n{system_content}")

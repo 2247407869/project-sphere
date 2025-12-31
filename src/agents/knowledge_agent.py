@@ -25,7 +25,16 @@ llm_reasoner = ChatOpenAI(
     api_key=settings.DEEPSEEK_API_KEY,
     base_url=settings.DEEPSEEK_BASE_URL,
     temperature=0,
-    streaming=True  # R1 支持流式输出思考过程
+    streaming=True
+)
+
+# 2025.12.31 最新视觉模型 (Gemini 3 Flash)
+# 推荐使用 OpenAI 兼容 API 以保持架构一致性
+llm_vision = ChatOpenAI(
+    model="gemini-3-flash", 
+    api_key=settings.GOOGLE_API_KEY,
+    base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
+    temperature=0
 )
 
 # 定义 Agent 的状态结构
