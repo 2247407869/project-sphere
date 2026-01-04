@@ -54,7 +54,8 @@ class Config:
     # 老张API配置（用于LLM推理和嵌入）
     OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
     OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL", "https://api.laozhang.ai/v1")
-    MODEL_NAME = os.getenv("MODEL_NAME", "gpt-3.5-turbo")
+    MODEL_NAME = os.getenv("MODEL_NAME", "gpt-4o-mini")
+    SMALL_MODEL_NAME = os.getenv("SMALL_MODEL_NAME", os.getenv("MODEL_NAME", "gpt-4o-mini"))
     EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "text-embedding-ada-002")
     
     # 数据库配置
@@ -118,6 +119,7 @@ class GraphitiWrapper:
                     config=LLMConfig(
                         api_key=Config.OPENAI_API_KEY,
                         model=Config.MODEL_NAME,
+                        small_model=Config.SMALL_MODEL_NAME,
                         base_url=Config.OPENAI_BASE_URL
                     )
                 ),
