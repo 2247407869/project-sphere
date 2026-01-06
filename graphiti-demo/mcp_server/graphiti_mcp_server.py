@@ -107,7 +107,8 @@ class GraphitiWrapper:
                 host=Config.REDIS_HOST,
                 port=Config.REDIS_PORT,
                 username="default" if Config.REDIS_PASSWORD else None,
-                password=Config.REDIS_PASSWORD if Config.REDIS_PASSWORD else None
+                password=Config.REDIS_PASSWORD if Config.REDIS_PASSWORD else None,
+                database=Config.GRAPHITI_GROUP_ID  # 关键：指定正确的图名称
             )
             
             logger.info(f"🚀 初始化模型: LLM={Config.MODEL_NAME}, Embedding={Config.EMBEDDING_MODEL}")
