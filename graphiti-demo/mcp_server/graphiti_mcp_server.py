@@ -213,6 +213,7 @@ class GraphitiWrapper:
     
     async def search_episodes(self, query: str, num_results: int = 5) -> List[Dict[str, Any]]:
         """搜索Episodes - 改进版本，提供更友好的用户体验"""
+        logger.info(f"🔎 正在搜索记忆: query='{query}', limit={num_results}")
         try:
             if self.graphiti:
                 # 使用真实Graphiti搜索
@@ -221,6 +222,7 @@ class GraphitiWrapper:
                     num_results=num_results,
                     group_ids=[Config.GRAPHITI_GROUP_ID]
                 )
+                logger.info(f"📊 Graphiti搜索返回了 {len(results)} 条原始结果")
                 
                 formatted_results = []
                 for result in results:
@@ -318,9 +320,33 @@ class GraphitiWrapper:
         """获取Episodes列表"""
         try:
             if self.graphiti:
-                # 这里需要实现真实的获取逻辑
-                # 暂时返回空列表，因为Graphiti可能没有直接的列表方法
-                return []
+                # 使用 retrieve_episodes 获取最新 Episodic 节点
+                nodes = await self.graphiti.retrieve_episodes(
+                    reference_time=datetime.now(timezone.utc),
+                    last_n=limit,
+                    group_ids=[Config.GRAPHITI_GROUP_ID]
+                )
+                
+                formatted_results = []
+                for node in nodes:
+                    formatted_result = {
+                        "id": str(getattr(node, 'uuid', 'unknown')),
+                        "name": getattr(node, 'name', 'Unnamed'),
+                        "content": getattr(node, 'episode_body', ''),
+                        "score": 1.0,
+                        "created_at": getattr(node, 'created_at', datetime.now(timezone.utc).isoformat()),
+                        "episode_type": "episode",
+                        "source_description": getattr(node, 'source_description', 'Original Memory'),
+                        "content_type": "原始记忆"
+                    }
+                    
+                    if hasattr(node, 'created_at') and hasattr(node.created_at, 'isoformat'):
+                        formatted_result["created_at"] = node.created_at.isoformat()
+                        
+                    formatted_results.append(formatted_result)
+                
+                logger.info(f"✅ 获取到 {len(formatted_results)} 个Episode")
+                return formatted_results
             else:
                 # 模拟模式
                 return self.episodes[-limit:]
