@@ -34,7 +34,7 @@ services:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - OPENAI_BASE_URL=${OPENAI_BASE_URL:-https://api.laozhang.ai/v1}
       - MODEL_NAME=${MODEL_NAME:-gpt-3.5-turbo}
-      - SMALL_MODEL_NAME=${SMALL_MODEL_NAME:-gpt-4o-mini}
+      - SMALL_MODEL_NAME=${SMALL_MODEL_NAME:-deepseek-v3.2-exp}
       - EMBEDDING_MODEL=${EMBEDDING_MODEL:-text-embedding-ada-002}
       - REDIS_HOST=falkordb
       - REDIS_PORT=6379
