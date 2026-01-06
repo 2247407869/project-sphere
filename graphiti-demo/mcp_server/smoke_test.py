@@ -1,34 +1,47 @@
 import asyncio
 import os
 import sys
+from datetime import datetime, timezone
 
-# Append current directory to path just in case
+# Append current directory to path
 sys.path.append('/app')
 
 from graphiti_mcp_server import graphiti_wrapper, Config
-from graphiti_core.nodes import EpisodeType
 
 async def test():
     print("Initializing Graphiti...")
     await graphiti_wrapper.initialize()
     
-    print('Adding memory...')
+    print("--- DB INSPECTION ---")
     try:
-        res = await graphiti_wrapper.add_episode('SmokeTest', 'This is a self-test memory.', 'text')
-        print(f'Add result success: {res.get("success")}')
-        if not res.get("success"):
-            print(f"Error adding episode: {res.get('message')}")
+        driver = graphiti_wrapper.graphiti.graph_driver
+        # Check all nodes
+        res = await driver.query('MATCH (n) RETURN labels(n), keys(n), n.group_id LIMIT 10')
+        print(f"Found {len(res)} nodes in sample.")
+        for row in res:
+            print(f" - Labels: {row[0]} | Keys: {row[1]} | GroupID: {row[2]}")
+            
+        # specifically count Episode nodes
+        count_res = await driver.query('MATCH (e:Episode) RETURN count(e)')
+        print(f"Total Episode nodes: {count_res[0][0]}")
     except Exception as e:
-        print(f"Exception adding episode: {e}")
+        print(f"DB Inspection failed: {e}")
 
-    print('Searching memory...')
+    print("\n--- ADD MEMORY TEST ---")
     try:
-        search_res = await graphiti_wrapper.search_episodes('self-test', 5)
+        res = await graphiti_wrapper.add_episode('SmokeTest_V3', f'Self-test at {datetime.now().isoformat()}', 'text')
+        print(f'Add result success: {res.get("success")}')
+    except Exception as e:
+        print(f"Add memory failed: {e}")
+
+    print("\n--- SEARCH TEST ---")
+    try:
+        search_res = await graphiti_wrapper.search_episodes('Self-test', 5)
         print(f'Search result count: {len(search_res)}')
         for item in search_res:
-            print(f" - Found: {item.get('name')} ({item.get('id')})")
+            print(f" - Found ({item.get('episode_type')}): {item.get('name')} | Content: {item.get('content')[:30]}...")
     except Exception as e:
-        print(f"Exception searching: {e}")
+        print(f"Search failed: {e}")
         
     await graphiti_wrapper.close()
 

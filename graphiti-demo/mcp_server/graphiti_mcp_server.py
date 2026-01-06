@@ -227,12 +227,12 @@ class GraphitiWrapper:
                 formatted_results = []
                 for result in results:
                     # 检查结果类型并相应处理
-                    if hasattr(result, 'episode_body'):
+                    if hasattr(result, 'content') and not hasattr(result, 'fact'):
                         # 这是一个Episode节点 - 原始记忆内容
                         formatted_result = {
                             "id": str(getattr(result, 'uuid', 'unknown')),
                             "name": getattr(result, 'name', 'Unnamed'),
-                            "content": getattr(result, 'episode_body', ''),
+                            "content": getattr(result, 'content', ''),
                             "score": float(getattr(result, 'score', 1.0)),
                             "created_at": getattr(result, 'created_at', datetime.now().isoformat()),
                             "episode_type": "episode",
@@ -332,7 +332,7 @@ class GraphitiWrapper:
                     formatted_result = {
                         "id": str(getattr(node, 'uuid', 'unknown')),
                         "name": getattr(node, 'name', 'Unnamed'),
-                        "content": getattr(node, 'episode_body', ''),
+                        "content": getattr(node, 'content', ''),
                         "score": 1.0,
                         "created_at": getattr(node, 'created_at', datetime.now(timezone.utc).isoformat()),
                         "episode_type": "episode",
