@@ -225,12 +225,13 @@ class GraphitiWrapper:
                 config = SearchConfig()
                 config.limit = num_results
                 
-                # 调用底层搜索 (注意签名：clients, query, group_ids, config)
+                # 调用底层搜索 (注意签名：clients, query, group_ids, config, driver)
                 search_results = await internal_search(
-                    list(self.graphiti.clients.values())[0] if isinstance(self.graphiti.clients, dict) else self.graphiti.clients,
+                    self.graphiti.clients,
                     query,
                     [Config.GRAPHITI_GROUP_ID],
-                    config
+                    config,
+                    driver=self.driver
                 )
                 
                 logger.info(f"📊 Graphiti搜索返回了: {len(search_results.episodes)} 个Episode, {len(search_results.edges)} 条知识边")
