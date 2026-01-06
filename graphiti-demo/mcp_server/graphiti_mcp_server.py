@@ -226,6 +226,10 @@ class GraphitiWrapper:
                 config.limit = num_results
                 
                 # 调用底层搜索 (注意签名：clients, query, group_ids, config, driver)
+                logger.info(f"DEBUG: clients type={type(self.graphiti.clients)}")
+                logger.info(f"DEBUG: driver type={type(self.driver)}")
+                logger.info(f"DEBUG: group_ids={[Config.GRAPHITI_GROUP_ID]}")
+                
                 search_results = await internal_search(
                     self.graphiti.clients,
                     query,
