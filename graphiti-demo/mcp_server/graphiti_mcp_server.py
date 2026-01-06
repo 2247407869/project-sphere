@@ -234,7 +234,14 @@ class GraphitiWrapper:
                     try:
                         # 简单的关键词匹配
                         cypher = f"MATCH (n:Episodic) WHERE n.group_id = '{Config.GRAPHITI_GROUP_ID}' AND (n.content CONTAINS '{query}' OR n.name CONTAINS '{query}') RETURN n LIMIT {num_results}"
-                        results = await self.driver.execute_query(cypher)
+                        raw_res = await self.driver.execute_query(cypher)
+                        
+                        # 处理 FalkorDB 返回的 (results, statistics) 元组
+                        if isinstance(raw_res, (tuple, list)) and len(raw_res) > 0 and isinstance(raw_res[0], list):
+                            results = raw_res[0]
+                        else:
+                            results = raw_res
+                            
                         logger.info(f"兜底 Cypher 检索返回了 {len(results)} 条结果")
                     except Exception as e:
                         logger.warning(f"兜底 Cypher 检索也失败了: {e}")
@@ -355,7 +362,14 @@ class GraphitiWrapper:
                 if not nodes and self.driver:
                     try:
                         cypher = f"MATCH (n:Episodic) WHERE n.group_id = '{Config.GRAPHITI_GROUP_ID}' RETURN n ORDER BY n.created_at DESC LIMIT {limit}"
-                        nodes = await self.driver.execute_query(cypher)
+                        raw_res = await self.driver.execute_query(cypher)
+                        
+                        # 处理 FalkorDB 返回的 (results, statistics) 元组
+                        if isinstance(raw_res, (tuple, list)) and len(raw_res) > 0 and isinstance(raw_res[0], list):
+                            nodes = raw_res[0]
+                        else:
+                            nodes = raw_res
+                            
                         logger.info(f"原生 Cypher 返回了 {len(nodes)} 个结果")
                     except Exception as e:
                         logger.error(f"原生 Cypher 兜底也失败了: {e}")
