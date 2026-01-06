@@ -221,22 +221,28 @@ class GraphitiWrapper:
         logger.info(f"🔎 正在搜索记忆: query='{query}', limit={num_results}")
         try:
             if self.graphiti:
-                # 使用底层 search API 以获取 reranker 评分
-                config = SearchConfig()
-                config.limit = num_results
-                
-                # 调用底层搜索 (注意签名：clients, query, group_ids, config, driver)
-                logger.info(f"DEBUG: clients type={type(self.graphiti.clients)}")
-                logger.info(f"DEBUG: driver type={type(self.driver)}")
-                logger.info(f"DEBUG: group_ids={[Config.GRAPHITI_GROUP_ID]}")
-                
-                search_results = await internal_search(
-                    self.graphiti.clients,
-                    query,
-                    [Config.GRAPHITI_GROUP_ID],
-                    config,
-                    driver=self.driver
-                )
+                try:
+                    # 使用底层 search API 以获取 reranker 评分
+                    config = SearchConfig()
+                    config.limit = num_results
+                    
+                    # 调用底层搜索 (注意签名：clients, query, group_ids, config, driver)
+                    logger.info(f"DEBUG: clients type={type(self.graphiti.clients)}")
+                    logger.info(f"DEBUG: driver type={type(self.driver)}")
+                    logger.info(f"DEBUG: group_ids={[Config.GRAPHITI_GROUP_ID]}")
+                    
+                    search_results = await internal_search(
+                        self.graphiti.clients,
+                        query,
+                        [Config.GRAPHITI_GROUP_ID],
+                        config,
+                        driver=self.driver
+                    )
+                except Exception as search_err:
+                    logger.error(f"❌ internal_search 核心调用失败: {search_err}")
+                    import traceback
+                    logger.error(traceback.format_exc())
+                    return []
                 
                 logger.info(f"📊 Graphiti搜索返回了: {len(search_results.episodes)} 个Episode, {len(search_results.edges)} 条知识边")
                 
