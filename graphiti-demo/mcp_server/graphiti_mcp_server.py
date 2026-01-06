@@ -246,7 +246,7 @@ class GraphitiWrapper:
                     logger.error(traceback.format_exc())
                     return []
                 
-                logger.info(f"📊 Graphiti搜索返回了: {len(search_results.episodes)} 个Episode, {len(search_results.edges)} 条知识边")
+                logger.info(f"📊 internal_search 原始返回: {len(search_results.episodes)} 个Episode, {len(search_results.edges)} 条知识边")
                 
                 formatted_results = []
                 
