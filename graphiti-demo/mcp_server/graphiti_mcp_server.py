@@ -218,7 +218,8 @@ class GraphitiWrapper:
                 # 使用真实Graphiti搜索
                 results = await self.graphiti.search(
                     query=query,
-                    num_results=num_results
+                    num_results=num_results,
+                    group_ids=[Config.GRAPHITI_GROUP_ID]
                 )
                 
                 formatted_results = []
