@@ -88,6 +88,7 @@ class ToolCallRequest(BaseModel):
 class GraphitiWrapper:
     def __init__(self):
         self.graphiti = None
+        self.driver = None  # 显式存储驱动
         self.episodes = []  # 模拟存储
         
     async def initialize(self):
@@ -132,6 +133,7 @@ class GraphitiWrapper:
                 )
                 # 移除cross_encoder，使用默认的向量相似度排序
             )
+            self.driver = falkor_driver  # 存储引用
             
             # 构建索引和约束
             await self.graphiti.build_indices_and_constraints()
@@ -227,13 +229,12 @@ class GraphitiWrapper:
                 logger.info(f"📊 Graphiti搜索返回了 {len(results)} 条结果")
 
                 # 如果搜索结果为空，尝试通过 Cypher 进行简单的关键词检索作为兜底
-                if not results:
+                if not results and self.driver:
                     logger.info(f"🔍 语义搜索无结果，尝试 Cypher 关键词检索: {query}")
                     try:
-                        driver = self.graphiti.graph_driver
                         # 简单的关键词匹配
                         cypher = f"MATCH (n:Episodic) WHERE n.group_id = '{Config.GRAPHITI_GROUP_ID}' AND (n.content CONTAINS '{query}' OR n.name CONTAINS '{query}') RETURN n LIMIT {num_results}"
-                        results = await driver.execute_query(cypher)
+                        results = await self.driver.execute_query(cypher)
                         logger.info(f"兜底 Cypher 检索返回了 {len(results)} 条结果")
                     except Exception as e:
                         logger.warning(f"兜底 Cypher 检索也失败了: {e}")
@@ -351,11 +352,10 @@ class GraphitiWrapper:
                     nodes = []
 
                 # 如果官方 API 返回空，使用原生 Cypher 兜底 (针对某些版本的 FalkorDB 兼容性)
-                if not nodes:
+                if not nodes and self.driver:
                     try:
-                        driver = self.graphiti.graph_driver
                         cypher = f"MATCH (n:Episodic) WHERE n.group_id = '{Config.GRAPHITI_GROUP_ID}' RETURN n ORDER BY n.created_at DESC LIMIT {limit}"
-                        nodes = await driver.execute_query(cypher)
+                        nodes = await self.driver.execute_query(cypher)
                         logger.info(f"原生 Cypher 返回了 {len(nodes)} 个结果")
                     except Exception as e:
                         logger.error(f"原生 Cypher 兜底也失败了: {e}")
