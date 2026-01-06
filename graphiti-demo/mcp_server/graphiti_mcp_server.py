@@ -362,42 +362,52 @@ class GraphitiWrapper:
                         nodes = []
                 
                 formatted_results = []
-                for node in nodes:
-                    # execute_query 返回的结果结构可能略有不同，需要兼容性处理
-                    # 如果是 list (row)，取第一个元素
-                    actual_node = node[0] if isinstance(node, (list, tuple)) else node
-                    
-                    # 确定属性字典
-                    props = {}
-                    if hasattr(actual_node, 'properties'):
-                        props = actual_node.properties
-                    elif isinstance(actual_node, dict):
-                        props = actual_node
-                    else:
-                        # 尝试通过 getattr 获取常见属性
-                        for attr in ['uuid', 'name', 'content', 'created_at', 'source_description']:
-                            if hasattr(actual_node, attr):
-                                props[attr] = getattr(actual_node, attr)
-
-                    formatted_result = {
-                        "id": str(props.get('uuid', 'unknown')),
-                        "name": props.get('name', 'Unnamed'),
-                        "content": props.get('content', ''),
-                        "score": 1.0,
-                        "created_at": props.get('created_at', datetime.now(timezone.utc).isoformat()),
-                        "episode_type": "episode",
-                        "source_description": props.get('source_description', 'Original Memory'),
-                        "content_type": "原始记忆"
-                    }
-                    
-                    # 格式化日期
-                    created_at = props.get('created_at')
-                    if hasattr(created_at, 'isoformat'):
-                        formatted_result["created_at"] = created_at.isoformat()
-                    elif isinstance(created_at, str):
-                        formatted_result["created_at"] = created_at
+                for node_row in nodes:
+                    try:
+                        # execute_query 返回的结果结构可能略有不同
+                        if not node_row:
+                            continue
+                            
+                        # 如果是 list (row)，取第一个元素
+                        actual_node = node_row[0] if isinstance(node_row, (list, tuple)) and len(node_row) > 0 else node_row
                         
-                    formatted_results.append(formatted_result)
+                        # 确定属性字典
+                        props = {}
+                        if hasattr(actual_node, 'properties'):
+                            props = actual_node.properties
+                        elif isinstance(actual_node, dict):
+                            props = actual_node
+                        else:
+                            # 尝试通过 getattr 获取常见属性
+                            for attr in ['uuid', 'name', 'content', 'created_at', 'source_description']:
+                                try:
+                                    val = getattr(actual_node, attr, None)
+                                    if val is not None:
+                                        props[attr] = val
+                                except:
+                                    pass
+
+                        formatted_result = {
+                            "id": str(props.get('uuid', 'unknown')),
+                            "name": props.get('name', 'Unnamed'),
+                            "content": props.get('content', ''),
+                            "score": 1.0,
+                            "created_at": props.get('created_at', datetime.now(timezone.utc).isoformat()),
+                            "episode_type": "episode",
+                            "source_description": props.get('source_description', 'Original Memory'),
+                            "content_type": "原始记忆"
+                        }
+                        
+                        # 格式化日期
+                        created_at = props.get('created_at')
+                        if hasattr(created_at, 'isoformat'):
+                            formatted_result["created_at"] = created_at.isoformat()
+                        elif isinstance(created_at, str):
+                            formatted_result["created_at"] = created_at
+                            
+                        formatted_results.append(formatted_result)
+                    except Exception as row_err:
+                        logger.warning(f"解析单条记录失败: {row_err}")
                 
                 logger.info(f"✅ 最终获取到 {len(formatted_results)} 个Episode")
                 return formatted_results
