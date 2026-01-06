@@ -224,67 +224,85 @@ class GraphitiWrapper:
                 )
                 logger.info(f"📊 Graphiti搜索返回了 {len(results)} 条原始结果")
                 
+                logger.info(f"📊 Graphiti搜索返回了 {len(results)} 条结果")
+
+                # 如果搜索结果为空，尝试通过 Cypher 进行简单的关键词检索作为兜底
+                if not results:
+                    logger.info(f"🔍 语义搜索无结果，尝试 Cypher 关键词检索: {query}")
+                    try:
+                        driver = self.graphiti.graph_driver
+                        # 简单的关键词匹配
+                        cypher = f"MATCH (n:Episodic) WHERE n.group_id = '{Config.GRAPHITI_GROUP_ID}' AND (n.content CONTAINS '{query}' OR n.name CONTAINS '{query}') RETURN n LIMIT {num_results}"
+                        results = await driver.execute_query(cypher)
+                        logger.info(f"兜底 Cypher 检索返回了 {len(results)} 条结果")
+                    except Exception as e:
+                        logger.warning(f"兜底 Cypher 检索也失败了: {e}")
+                
                 formatted_results = []
                 for result in results:
+                    # execute_query 可能返回 [node] 列表
+                    actual_item = result[0] if isinstance(result, (list, tuple)) else result
+                    
+                    # 确定属性字典
+                    props = {}
+                    if hasattr(actual_item, 'properties'):
+                        props = actual_item.properties
+                    elif isinstance(actual_item, dict):
+                        props = actual_item
+                    else:
+                        for attr in ['uuid', 'name', 'content', 'fact', 'score', 'created_at', 'source_description']:
+                            if hasattr(actual_item, attr):
+                                props[attr] = getattr(actual_item, attr)
+
                     # 检查结果类型并相应处理
-                    if hasattr(result, 'content') and not hasattr(result, 'fact'):
+                    if props.get('content') and not props.get('fact'):
                         # 这是一个Episode节点 - 原始记忆内容
                         formatted_result = {
-                            "id": str(getattr(result, 'uuid', 'unknown')),
-                            "name": getattr(result, 'name', 'Unnamed'),
-                            "content": getattr(result, 'content', ''),
-                            "score": float(getattr(result, 'score', 1.0)),
-                            "created_at": getattr(result, 'created_at', datetime.now().isoformat()),
+                            "id": str(props.get('uuid', 'unknown')),
+                            "name": props.get('name', 'Unnamed'),
+                            "content": props.get('content', ''),
+                            "score": float(props.get('score', 1.0)),
+                            "created_at": props.get('created_at', datetime.now().isoformat()),
                             "episode_type": "episode",
-                            "source_description": getattr(result, 'source_description', 'Original Memory'),
+                            "source_description": props.get('source_description', 'Original Memory'),
                             "content_type": "原始记忆"
                         }
-                    elif hasattr(result, 'fact'):
+                    elif props.get('fact'):
                         # 这是一个Edge对象，包含事实信息 - 结构化知识
-                        fact_content = getattr(result, 'fact', '')
-                        
-                        # 改进Edge内容的呈现，让它更像自然语言
-                        edge_name = getattr(result, 'name', 'UNKNOWN')
+                        fact_content = props.get('fact', '')
+                        edge_name = props.get('name', 'UNKNOWN')
                         
                         # 根据Edge类型提供更友好的描述
-                        if edge_name == 'HAS_OCCUPATION':
-                            user_friendly_content = f"职业信息：{fact_content}"
-                        elif edge_name == 'HAS_USER_NAME':
-                            user_friendly_content = f"用户名称：{fact_content}"
-                        elif edge_name == 'ADDED_MEMORY_FOR':
-                            user_friendly_content = f"记忆关联：{fact_content}"
-                        elif edge_name == 'USED_FOR':
-                            user_friendly_content = f"用途说明：{fact_content}"
-                        else:
-                            user_friendly_content = f"知识关系：{fact_content}"
+                        user_friendly_content = f"知识关系({edge_name})：{fact_content}"
                         
                         formatted_result = {
-                            "id": str(getattr(result, 'uuid', 'unknown')),
+                            "id": str(props.get('uuid', 'unknown')),
                             "name": edge_name,
                             "content": user_friendly_content,
-                            "score": float(getattr(result, 'score', 1.0)),
-                            "created_at": getattr(result, 'created_at', datetime.now().isoformat()),
+                            "score": float(props.get('score', 1.0)),
+                            "created_at": props.get('created_at', datetime.now().isoformat()),
                             "episode_type": "knowledge",
                             "source_description": "结构化知识",
                             "content_type": "知识关系",
-                            "raw_fact": fact_content  # 保留原始事实
+                            "raw_fact": fact_content
                         }
                     else:
                         # 通用处理
                         formatted_result = {
-                            "id": str(getattr(result, 'uuid', getattr(result, 'id', 'unknown'))),
-                            "name": getattr(result, 'name', 'Unnamed'),
-                            "content": str(result)[:200] + "..." if len(str(result)) > 200 else str(result),
-                            "score": float(getattr(result, 'score', 1.0)),
-                            "created_at": getattr(result, 'created_at', datetime.now().isoformat()),
+                            "id": str(props.get('uuid', 'unknown')),
+                            "name": props.get('name', 'Unnamed'),
+                            "content": str(actual_item)[:200] + "..." if len(str(actual_item)) > 200 else str(actual_item),
+                            "score": float(props.get('score', 1.0)),
+                            "created_at": props.get('created_at', datetime.now().isoformat()),
                             "episode_type": "unknown",
                             "source_description": "Unknown",
                             "content_type": "未知类型"
                         }
                     
-                    # 如果created_at是datetime对象，转换为字符串
-                    if hasattr(result, 'created_at') and hasattr(result.created_at, 'isoformat'):
-                        formatted_result["created_at"] = result.created_at.isoformat()
+                    # 格式化日期
+                    created_at = props.get('created_at')
+                    if hasattr(created_at, 'isoformat'):
+                        formatted_result["created_at"] = created_at.isoformat()
                     
                     formatted_results.append(formatted_result)
                 
@@ -294,7 +312,7 @@ class GraphitiWrapper:
                     -x['score']  # 高分优先
                 ))
                 
-                logger.info(f"✅ 搜索完成，找到 {len(formatted_results)} 个结果")
+                logger.info(f"✅ 搜索完成，最终找到 {len(formatted_results)} 个结果")
                 return formatted_results
             else:
                 # 模拟搜索
@@ -320,32 +338,68 @@ class GraphitiWrapper:
         """获取Episodes列表"""
         try:
             if self.graphiti:
-                # 使用 retrieve_episodes 获取最新 Episodic 节点
-                nodes = await self.graphiti.retrieve_episodes(
-                    reference_time=datetime.now(timezone.utc),
-                    last_n=limit,
-                    group_ids=[Config.GRAPHITI_GROUP_ID]
-                )
+                try:
+                    # 首先尝试官方 API
+                    nodes = await self.graphiti.retrieve_episodes(
+                        reference_time=datetime.now(timezone.utc),
+                        last_n=limit,
+                        group_ids=[Config.GRAPHITI_GROUP_ID]
+                    )
+                    logger.info(f"API retrieve_episodes 返回了 {len(nodes)} 个结果")
+                except Exception as e:
+                    logger.warning(f"API retrieve_episodes 失败，尝试原生 Cypher: {e}")
+                    nodes = []
+
+                # 如果官方 API 返回空，使用原生 Cypher 兜底 (针对某些版本的 FalkorDB 兼容性)
+                if not nodes:
+                    try:
+                        driver = self.graphiti.graph_driver
+                        cypher = f"MATCH (n:Episodic) WHERE n.group_id = '{Config.GRAPHITI_GROUP_ID}' RETURN n ORDER BY n.created_at DESC LIMIT {limit}"
+                        nodes = await driver.execute_query(cypher)
+                        logger.info(f"原生 Cypher 返回了 {len(nodes)} 个结果")
+                    except Exception as e:
+                        logger.error(f"原生 Cypher 兜底也失败了: {e}")
+                        nodes = []
                 
                 formatted_results = []
                 for node in nodes:
+                    # execute_query 返回的结果结构可能略有不同，需要兼容性处理
+                    # 如果是 list (row)，取第一个元素
+                    actual_node = node[0] if isinstance(node, (list, tuple)) else node
+                    
+                    # 确定属性字典
+                    props = {}
+                    if hasattr(actual_node, 'properties'):
+                        props = actual_node.properties
+                    elif isinstance(actual_node, dict):
+                        props = actual_node
+                    else:
+                        # 尝试通过 getattr 获取常见属性
+                        for attr in ['uuid', 'name', 'content', 'created_at', 'source_description']:
+                            if hasattr(actual_node, attr):
+                                props[attr] = getattr(actual_node, attr)
+
                     formatted_result = {
-                        "id": str(getattr(node, 'uuid', 'unknown')),
-                        "name": getattr(node, 'name', 'Unnamed'),
-                        "content": getattr(node, 'content', ''),
+                        "id": str(props.get('uuid', 'unknown')),
+                        "name": props.get('name', 'Unnamed'),
+                        "content": props.get('content', ''),
                         "score": 1.0,
-                        "created_at": getattr(node, 'created_at', datetime.now(timezone.utc).isoformat()),
+                        "created_at": props.get('created_at', datetime.now(timezone.utc).isoformat()),
                         "episode_type": "episode",
-                        "source_description": getattr(node, 'source_description', 'Original Memory'),
+                        "source_description": props.get('source_description', 'Original Memory'),
                         "content_type": "原始记忆"
                     }
                     
-                    if hasattr(node, 'created_at') and hasattr(node.created_at, 'isoformat'):
-                        formatted_result["created_at"] = node.created_at.isoformat()
+                    # 格式化日期
+                    created_at = props.get('created_at')
+                    if hasattr(created_at, 'isoformat'):
+                        formatted_result["created_at"] = created_at.isoformat()
+                    elif isinstance(created_at, str):
+                        formatted_result["created_at"] = created_at
                         
                     formatted_results.append(formatted_result)
                 
-                logger.info(f"✅ 获取到 {len(formatted_results)} 个Episode")
+                logger.info(f"✅ 最终获取到 {len(formatted_results)} 个Episode")
                 return formatted_results
             else:
                 # 模拟模式
