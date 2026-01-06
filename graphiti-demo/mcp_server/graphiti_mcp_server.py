@@ -219,7 +219,7 @@ class GraphitiWrapper:
                 results = await self.graphiti.search(
                     query=query,
                     num_results=num_results,
-                    group_id=Config.GRAPHITI_GROUP_ID
+                    group_ids=[Config.GRAPHITI_GROUP_ID]
                 )
                 
                 formatted_results = []
