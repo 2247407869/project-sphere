@@ -30,6 +30,8 @@ try:
     from graphiti_core.llm_client.openai_generic_client import OpenAIGenericClient
     from graphiti_core.llm_client.config import LLMConfig
     from graphiti_core.embedder.openai import OpenAIEmbedder, OpenAIEmbedderConfig
+    from graphiti_core.search.search import search as internal_search
+    from graphiti_core.search.search_config import SearchConfig
     GRAPHITI_AVAILABLE = True
     LAOZHANG_AVAILABLE = True
 except ImportError as e:
@@ -219,72 +221,71 @@ class GraphitiWrapper:
         logger.info(f"🔎 正在搜索记忆: query='{query}', limit={num_results}")
         try:
             if self.graphiti:
-                # 使用真实Graphiti搜索
-                results = await self.graphiti.search(
-                    query=query,
-                    num_results=num_results,
-                    group_ids=[Config.GRAPHITI_GROUP_ID]
+                # 使用底层 search API 以获取 reranker 评分
+                config = SearchConfig()
+                config.limit = num_results
+                
+                # 调用底层搜索
+                search_results = await internal_search(
+                    self.graphiti.clients,
+                    query,
+                    center_node_uuid=None,
+                    search_vector=None,
+                    group_ids=[Config.GRAPHITI_GROUP_ID],
+                    config=config
                 )
-                logger.info(f"📊 Graphiti搜索返回了 {len(results)} 条结果")
+                
+                logger.info(f"📊 Graphiti搜索返回了: {len(search_results.episodes)} 个Episode, {len(search_results.edges)} 条知识边")
                 
                 formatted_results = []
-                for result in results:
-                    # 检查结果类型并相应处理
-                    # Episode节点对应原始记忆，带有 content 属性
-                    if hasattr(result, 'content') and not hasattr(result, 'fact'):
-                        formatted_result = {
-                            "id": str(getattr(result, 'uuid', 'unknown')),
-                            "name": getattr(result, 'name', 'Unnamed'),
-                            "content": getattr(result, 'content', ''),
-                            "score": float(getattr(result, 'score', 1.0)),
-                            "created_at": getattr(result, 'created_at', datetime.now().isoformat()),
-                            "episode_type": "episode",
-                            "source_description": getattr(result, 'source_description', 'Original Memory'),
-                            "content_type": "原始记忆"
-                        }
-                    elif hasattr(result, 'fact'):
-                        # Knowledge节点对应Edge，带有 fact 属性
-                        fact_content = getattr(result, 'fact', '')
-                        edge_name = getattr(result, 'name', 'UNKNOWN')
-                        user_friendly_content = f"知识关系({edge_name})：{fact_content}"
-                        
-                        formatted_result = {
-                            "id": str(getattr(result, 'uuid', 'unknown')),
-                            "name": edge_name,
-                            "content": user_friendly_content,
-                            "score": float(getattr(result, 'score', 1.0)),
-                            "created_at": getattr(result, 'created_at', datetime.now().isoformat()),
-                            "episode_type": "knowledge",
-                            "source_description": "结构化知识",
-                            "content_type": "知识关系",
-                            "raw_fact": fact_content
-                        }
-                    else:
-                        # 其他类型
-                        formatted_result = {
-                            "id": str(getattr(result, 'uuid', 'unknown')),
-                            "name": getattr(result, 'name', 'Unnamed'),
-                            "content": str(result)[:200] + "..." if len(str(result)) > 200 else str(result),
-                            "score": float(getattr(result, 'score', 1.0)),
-                            "created_at": getattr(result, 'created_at', datetime.now().isoformat()),
-                            "episode_type": "unknown",
-                            "source_description": "Unknown",
-                            "content_type": "未知类型"
-                        }
-                    
-                    if hasattr(result, 'created_at') and hasattr(result.created_at, 'isoformat'):
-                        formatted_result["created_at"] = result.created_at.isoformat()
-                    
+                
+                # 处理 Episodes (带有评分)
+                for i, episode in enumerate(search_results.episodes):
+                    score = search_results.episode_reranker_scores[i] if i < len(search_results.episode_reranker_scores) else 1.0
+                    formatted_result = {
+                        "id": str(getattr(episode, 'uuid', 'unknown')),
+                        "name": getattr(episode, 'name', 'Unnamed'),
+                        "content": getattr(episode, 'content', ''),
+                        "score": float(score),
+                        "created_at": getattr(episode, 'created_at', datetime.now().isoformat()),
+                        "episode_type": "episode",
+                        "source_description": getattr(episode, 'source_description', 'Original Memory'),
+                        "content_type": "原始记忆"
+                    }
+                    if hasattr(episode, 'created_at') and hasattr(episode.created_at, 'isoformat'):
+                        formatted_result["created_at"] = episode.created_at.isoformat()
                     formatted_results.append(formatted_result)
                 
-                # 按相关性和类型排序：Episode优先，然后是Edge
-                formatted_results.sort(key=lambda x: (
-                    0 if x['episode_type'] == 'episode' else 1,
-                    -x['score']
-                ))
+                # 处理 Knowledge Edges (带有评分)
+                for i, edge in enumerate(search_results.edges):
+                    score = search_results.edge_reranker_scores[i] if i < len(search_results.edge_reranker_scores) else 1.0
+                    fact_content = getattr(edge, 'fact', '')
+                    edge_name = getattr(edge, 'name', 'UNKNOWN')
+                    user_friendly_content = f"知识关系({edge_name})：{fact_content}"
+                    
+                    formatted_result = {
+                        "id": str(getattr(edge, 'uuid', 'unknown')),
+                        "name": edge_name,
+                        "content": user_friendly_content,
+                        "score": float(score),
+                        "created_at": getattr(edge, 'created_at', datetime.now().isoformat()),
+                        "episode_type": "knowledge",
+                        "source_description": "结构化知识",
+                        "content_type": "知识关系",
+                        "raw_fact": fact_content
+                    }
+                    if hasattr(edge, 'created_at') and hasattr(edge.created_at, 'isoformat'):
+                        formatted_result["created_at"] = edge.created_at.isoformat()
+                    formatted_results.append(formatted_result)
                 
-                logger.info(f"✅ 搜索完成，最终找到 {len(formatted_results)} 个结果")
-                return formatted_results
+                # 按相关性排序
+                formatted_results.sort(key=lambda x: -x['score'])
+                
+                # 截取请求的数量
+                final_results = formatted_results[:num_results]
+                
+                logger.info(f"✅ 搜索完成，返回前 {len(final_results)} 个高分结果")
+                return final_results
             else:
                 # 模拟搜索
                 results = []
