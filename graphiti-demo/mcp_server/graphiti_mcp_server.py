@@ -32,6 +32,7 @@ try:
     from graphiti_core.embedder.openai import OpenAIEmbedder, OpenAIEmbedderConfig
     from graphiti_core.search.search import search as internal_search
     from graphiti_core.search.search_config import SearchConfig
+    from graphiti_core.search.search_filters import SearchFilters
     GRAPHITI_AVAILABLE = True
     LAOZHANG_AVAILABLE = True
 except ImportError as e:
@@ -236,7 +237,8 @@ class GraphitiWrapper:
                         query,
                         [Config.GRAPHITI_GROUP_ID],
                         config,
-                        driver=self.driver
+                        driver=self.driver,
+                        search_filter=SearchFilters()
                     )
                 except Exception as search_err:
                     logger.error(f"❌ internal_search 核心调用失败: {search_err}")
