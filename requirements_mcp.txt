@@ -1,0 +1,7 @@
+graphiti-core[falkordb]
+falkordb
+mcp
+fastapi
+uvicorn
+python-dotenv
+httpx

@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+env/
+.env
+
+# Project Specific
+data/
+debug_*.txt
+debug_*.log
+# test_*.py (注释掉以允许 integration tests)
+startup.py
+deploy_to_hf.py
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Deployment
+.DS_Store
+*.log

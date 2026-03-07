@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  # LobeChat 前端界面
+  lobe-chat:
+    image: lobehub/lobe-chat
+    container_name: lobe-chat
+    restart: always
+    ports:
+      - "3210:3210"
+    environment:
+      - OPENAI_API_KEY=${DEEPSEEK_API_KEY}
+      - OPENAI_PROXY_URL=https://api.deepseek.com/v1
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
+      - DEEPSEEK_PROXY_URL=https://api.deepseek.com/v1
+      - ACCESS_CODE=${LOBE_ACCESS_CODE}
+      # 启用插件与 MCP 支持
+      - ENABLE_PLUGINS=1
+      - ENABLE_MCP=1
+    networks:
+      - sphere-network
+
+  # FalkorDB 图数据库 (2026 AI 记忆后端)
+  falkordb:
+    image: falkordb/falkordb:latest
+    container_name: falkordb
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./data/falkordb:/data
+    networks:
+      - sphere-network
+
+  # Cognition MCP Server (我们的核心记忆服务)
+  cognition-mcp:
+    build:
+      context: .
+      dockerfile: ./docker/mcp.Dockerfile
+    container_name: cognition-mcp
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      - GRAPHITI_DB_URL=falkordb://falkordb:6379
+      - OPENAI_API_KEY=${DEEPSEEK_API_KEY}
+      - OPENAI_BASE_URL=https://api.deepseek.com/v1
+      - MEMORY_PLUGIN_ENABLED=True
+    volumes:
+      - .:/app
+    depends_on:
+      - falkordb
+    networks:
+      - sphere-network
+
+networks:
+  sphere-network:
+    driver: bridge

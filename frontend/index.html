@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Project Sphere | Dialogue</title>
+    <!-- 强制禁用缓存 -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Outfit:wght@300;600&display=swap"
+        rel="stylesheet">
+    <style>
+        /* VERSION WATERMARK */
+        #version-tag {
+            position: fixed;
+            top: 0;
+            right: 0;
+            background: #00ff00;
+            color: black;
+            padding: 5px 10px;
+            z-index: 9999;
+            font-weight: bold;
+            font-size: 12px;
+            pointer-events: none;
+        }
+
+        :root {
+            --bg-color: #0d0d12;
+            --card-bg: rgba(255, 255, 255, 0.03);
+            --accent-color: #6366f1;
+            --user-msg-bg: #6366f1;
+            --ai-msg-bg: rgba(255, 255, 255, 0.08);
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --glass-border: rgba(255, 255, 255, 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        html,
+        body {
+            height: 100%;
+            height: -webkit-fill-available;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header */
+        header {
+            padding: 0.6rem;
+            background: rgba(13, 13, 18, 0.8);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--glass-border);
+            text-align: center;
+            z-index: 10;
+        }
+
+        h1 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.1rem;
+            background: linear-gradient(135deg, #fff 0%, var(--accent-color) 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* Memory Bar */
+        #memory-bar {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--glass-border);
+            padding: 0.7rem 1.2rem;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            z-index: 5;
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 0.5rem;
+            max-height: 48px;
+            transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow: hidden;
+            cursor: pointer;
+        }
+
+        #memory-bar.expanded {
+            max-height: 40vh;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        #memory-bar:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        #memory-content {
+            flex: 1;
+            line-height: 1.5;
+            word-break: break-word;
+            opacity: 0.8;
+        }
+
+        .session-actions {
+            display: flex;
+            gap: 0.5rem;
+            flex-shrink: 0;
+        }
+
+        .session-btn {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid var(--glass-border);
+            color: var(--text-secondary);
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        /* Chat Area */
+        #chat-container {
+            flex: 1;
+            min-height: 0;
+            overflow-y: auto;
+            overflow-x: hidden;
+            -webkit-overflow-scrolling: touch;
+            touch-action: pan-y;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .message {
+            max-width: 85%;
+            padding: 1rem 1.2rem;
+            border-radius: 20px;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            position: relative;
+        }
+
+        .user-message {
+            align-self: flex-end;
+            background: var(--user-msg-bg);
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .ai-message {
+            align-self: flex-start;
+            background: var(--ai-msg-bg);
+            border: 1px solid var(--glass-border);
+            border-bottom-left-radius: 4px;
+        }
+
+        .ai-message::before {
+            content: 'Sphere';
+            position: absolute;
+            top: -1.2rem;
+            left: 0.2rem;
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        /* Input Area */
+        .input-area {
+            padding: 1.2rem;
+            background: rgba(13, 13, 18, 0.9);
+            border-top: 1px solid var(--glass-border);
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+        }
+
+        .input-row {
+            display: flex;
+            gap: 0.8rem;
+        }
+
+        textarea {
+            flex: 1;
+            height: 50px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 0.8rem 1.2rem;
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 1rem;
+            resize: none;
+            outline: none;
+            transition: border-color 0.3s ease;
+        }
+
+        textarea:focus {
+            border-color: var(--accent-color);
+        }
+
+        .btn-circle {
+            width: 50px;
+            height: 50px;
+            background: var(--accent-color);
+            border: none;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
+        }
+
+        .action-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* Loading */
+        .typing {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-left: 0.5rem;
+            display: none !important;
+        }
+
+        .typing.show {
+            display: block !important;
+        }
+
+        /* Image Upload */
+        .image-preview-container {
+            display: none;
+            gap: 10px;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            margin-bottom: 10px;
+            overflow-x: auto;
+        }
+
+        .preview-item {
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        .preview-item img {
+            width: 60px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 8px;
+            border: 1px solid var(--accent-color);
+        }
+
+        .remove-img {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: #dc3545;
+            color: white;
+            border-radius: 50%;
+            width: 18px;
+            height: 18px;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        /* Debug Button */
+        #debug-toggle:hover {
+            background: var(--accent-color) !important;
+            color: white !important;
+            transform: translateY(-1px);
+        }
+    </style>
+</head>
+
+<body>
+    <div id="version-tag">V5.4 - OPTIMIZED</div>
+    <header>
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div></div>
+            <h1>Project Sphere</h1>
+            <button id="debug-toggle"
+                style="background: rgba(255,255,255,0.1); border: 1px solid var(--accent-color); color: var(--accent-color); padding: 0.4rem 0.8rem; border-radius: 8px; font-size: 0.75rem; cursor: pointer; transition: all 0.3s ease;">
+                🔧 Debug
+            </button>
+        </div>
+    </header>
+
+    <div id="memory-bar" onclick="toggleMemoryBar()">
+        <span><strong>Context:</strong> <span id="memory-content">正在唤醒记忆...</span></span>
+        <div class="session-actions">
+            <button class="session-btn" onclick="event.stopPropagation(); clearSession()">🗑️ 清空</button>
+        </div>
+    </div>
+
+    <div id="chat-container">
+        <div class="message ai-message">
+            欢迎来到 Sphere。我是你的第二大脑，可以随时查阅你的长期记忆。
+        </div>
+    </div>
+
+    <!-- Debug Panel -->
+    <div id="debug-panel"
+        style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.9); z-index: 1000; overflow-y: auto;">
+        <div style="max-width: 1200px; margin: 0 auto; padding: 2rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                <h2 style="color: var(--accent-color); margin: 0;">🔧 Debug Panel</h2>
+                <button id="debug-close"
+                    style="background: none; border: 1px solid var(--glass-border); color: var(--text-primary); padding: 0.5rem 1rem; border-radius: 8px; cursor: pointer;">
+                    关闭
+                </button>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+                <!-- 左侧：系统状态 -->
+                <div>
+                    <h3 style="color: var(--text-primary); margin-bottom: 1rem;">📊 系统状态</h3>
+                    <div id="debug-status"
+                        style="background: rgba(255,255,255,0.05); padding: 1rem; border-radius: 12px; font-family: monospace; font-size: 0.8rem; line-height: 1.6;">
+                        加载中...
+                    </div>
+
+                    <h3 style="color: var(--text-primary); margin: 2rem 0 1rem 0;">🧠 M2 摘要内容</h3>
+                    <div id="debug-m2-content"
+                        style="background: rgba(255,255,255,0.05); padding: 1rem; border-radius: 12px; font-size: 0.9rem; line-height: 1.6; white-space: pre-wrap;">
+                        加载中...
+                    </div>
+
+                    <div style="margin-top: 1rem;">
+                        <button id="debug-archive"
+                            style="background: var(--accent-color); border: none; color: white; padding: 0.5rem 1rem; border-radius: 8px; cursor: pointer; margin-right: 0.5rem;">
+                            手动归档
+                        </button>
+                        <button id="debug-clear"
+                            style="background: #dc3545; border: none; color: white; padding: 0.5rem 1rem; border-radius: 8px; cursor: pointer;">
+                            清空对话
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 右侧：M3记忆管理 -->
+                <div>
+                    <h3 style="color: var(--text-primary); margin-bottom: 1rem;">🗃️ M3 长期记忆</h3>
+                    <div id="debug-memories"
+                        style="background: rgba(255,255,255,0.05); padding: 1rem; border-radius: 12px; max-height: 400px; overflow-y: auto;">
+                        加载中...
+                    </div>
+
+                    <h3 style="color: var(--text-primary); margin: 2rem 0 1rem 0;">📄 记忆内容查看</h3>
+                    <div id="debug-memory-content"
+                        style="background: rgba(255,255,255,0.05); padding: 1rem; border-radius: 12px; max-height: 300px; overflow-y: auto; font-size: 0.8rem; line-height: 1.5; white-space: pre-wrap;">
+                        点击上方记忆文件查看内容
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="input-area">
+        <div id="image-preview" class="image-preview-container"></div>
+        <div class="action-row">
+            <span id="typing-indicator" class="typing">Sphere 正在思考...</span>
+            <input type="file" id="file-input" accept="image/*" style="display: none;"
+                onchange="handleFileSelect(event)">
+            <button class="session-btn" onclick="document.getElementById('file-input').click()">🖼️ 图片</button>
+        </div>
+        <div class="input-row">
+            <textarea id="msg-input" placeholder="输入灵感或问题..."></textarea>
+            <button class="btn-circle" onclick="sendMessage()">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round" style="color: white;">
+                    <line x1="22" y1="2" x2="11" y2="13"></line>
+                    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const chatContainer = document.getElementById('chat-container');
+        const msgInput = document.getElementById('msg-input');
+        const typingIndicator = document.getElementById('typing-indicator');
+        const memoryContent = document.getElementById('memory-content');
+        let history = [];
+        let currentSummary = '';
+        let selectedImages = [];
+        let isProcessing = false;
+
+        function handleFileSelect(event) {
+            const files = event.target.files;
+            const preview = document.getElementById('image-preview');
+            preview.style.display = 'flex';
+
+            for (let file of files) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const base64 = e.target.result;
+                    selectedImages.push(base64);
+
+                    const div = document.createElement('div');
+                    div.className = 'preview-item';
+                    div.innerHTML = `
+                        <img src="${base64}">
+                        <div class="remove-img" onclick="removeImage(${selectedImages.length - 1}, this)">×</div>
+                    `;
+                    preview.appendChild(div);
+                };
+                reader.readAsDataURL(file);
+            }
+            event.target.value = ''; // 重置以允许重复选择
+        }
+
+        function removeImage(index, el) {
+            selectedImages.splice(index, 1);
+            el.parentElement.remove();
+            if (selectedImages.length === 0) {
+                document.getElementById('image-preview').style.display = 'none';
+            }
+        }
+
+        // 初始化
+        window.onload = async () => {
+            console.log("[Frontend] V5.4 Optimized Version Loaded");
+            await loadSessionData();
+        };
+
+        async function loadSessionData() {
+            try {
+                // 添加时间戳防止缓存
+                const timestamp = new Date().getTime();
+                const response = await fetch(`/session/load?t=${timestamp}`);
+                const data = await response.json();
+                history = data.history || [];
+                currentSummary = data.summary || '';
+                await renderHistory();
+                console.log("[Init] Loaded session, history length:", history.length);
+            } catch (e) {
+                console.error("Failed to load session:", e);
+                history = [];
+                currentSummary = '';
+            }
+        }
+
+        async function renderHistory() {
+            chatContainer.innerHTML = '';
+            history.forEach((item) => {
+                if (item.role === 'system') return;
+                addMessage(item.content, item.role === 'user' ? 'user' : 'ai', false);
+            });
+            let displayContent = "📝 [动态摘要]:\n" + (currentSummary || "尚无动态摘要");
+            memoryContent.innerText = displayContent;
+        }
+
+        function showTyping(text = 'Sphere 正在思考...') {
+            typingIndicator.innerText = text;
+            typingIndicator.className = 'typing show';
+        }
+
+        function hideTyping() {
+            typingIndicator.className = 'typing';
+            typingIndicator.innerText = 'Sphere 正在思考...';
+        }
+
+        function toggleMemoryBar() {
+            const memoryBar = document.getElementById('memory-bar');
+            memoryBar.classList.toggle('expanded');
+        }
+
+        async function sendMessage() {
+            if (isProcessing) return;
+
+            const text = msgInput.value.trim();
+            if (!text) return;
+
+            console.log("[Frontend] Starting new message:", text);
+            isProcessing = true;
+            addMessage(text, 'user', true);
+            msgInput.value = '';
+
+            history.push({ role: 'user', content: text });
+            const aiMsgDiv = addMessage('', 'ai'); // 恢复单一消息框
+            showTyping();
+
+            const payload = {
+                message: text,
+                images: selectedImages, // 注入多模态数据
+                history: history.slice(0, -1),
+                summary: currentSummary,
+                auto_save: true
+            };
+
+            // 发送后清空图片（注意：在 finally 中清空可能更稳健，但在流开始时清空可防止重复发送）
+            selectedImages = [];
+            document.getElementById('image-preview').innerHTML = '';
+            document.getElementById('image-preview').style.display = 'none';
+
+            console.log("[Frontend] Sending payload:", payload);
+
+            let actualContent = "";
+
+            try {
+                const response = await fetch('/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                console.log("[Frontend] Response received, status:", response.status);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let completed = false;
+                let buffer = "";
+
+                // 45秒超时保护
+                const timeoutId = setTimeout(() => {
+                    if (!completed) {
+                        console.warn("[Stream] Timeout - forcing completion");
+                        completed = true;
+                        hideTyping();
+                        isProcessing = false;
+                        reader.cancel().catch(() => { });
+                    }
+                }, 45000);
+
+                try {
+                    while (!completed) {
+                        const { done, value } = await reader.read();
+
+                        if (done) {
+                            console.log("[Stream] Reader done");
+                            completed = true;
+                            break;
+                        }
+
+                        const chunk = decoder.decode(value, { stream: true });
+                        buffer += chunk;
+
+                        // 按双换行符分割完整的事件
+                        const events = buffer.split('\n\n');
+                        buffer = events.pop() || "";
+
+                        for (const event of events) {
+                            if (!event.trim()) continue;
+
+                            const lines = event.split('\n');
+                            let eventType = '';
+                            let eventData = '';
+
+                            // 解析事件 - 正确处理多行data
+                            for (let i = 0; i < lines.length; i++) {
+                                const line = lines[i];
+                                if (line.startsWith('event: ')) {
+                                    eventType = line.substring(7).trim();
+                                } else if (line.startsWith('data: ')) {
+                                    // 收集所有data行
+                                    const dataLines = [];
+                                    for (let j = i; j < lines.length; j++) {
+                                        const dataLine = lines[j];
+                                        if (dataLine.startsWith('data: ')) {
+                                            dataLines.push(dataLine.substring(6));
+                                        } else if (dataLine.startsWith('event: ')) {
+                                            break; // 遇到新事件，停止
+                                        }
+                                    }
+                                    eventData = dataLines.join('\n');
+                                    break;
+                                }
+                            }
+
+                            console.log("[Stream] Event:", eventType, "Data length:", eventData.length);
+
+                            // 处理不同类型的事件
+                            if (eventType === 'status' && !completed) {
+                                if (eventData.includes('正在查阅记忆')) {
+                                    showTyping('🧠 ' + eventData);
+                                } else {
+                                    showTyping(eventData);
+                                }
+                            } else if (eventType === 'content') {
+                                if (eventData.length > 0) {
+                                    actualContent += eventData;
+                                    aiMsgDiv.innerText = actualContent;
+                                    hideTyping(); // 开始显示内容时隐藏typing
+                                    console.log("[Stream] Content updated, total length:", actualContent.length);
+                                }
+                            } else if (eventType === 'metadata') {
+                                console.log("[Stream] Metadata event received");
+                                try {
+                                    const metadata = JSON.parse(eventData);
+                                    currentSummary = metadata.summary || currentSummary;
+                                    memoryContent.innerText = "📝 [动态摘要]:\n" + (currentSummary || "尚无动态摘要");
+                                    if (metadata.history && metadata.history.length > 0) {
+                                        history = metadata.history;
+                                    }
+                                } catch (e) {
+                                    console.warn("Metadata parse failed:", e);
+                                }
+                            } else if (eventType === 'done') {
+                                console.log("[Stream] Done event found");
+                                completed = true;
+                                break;
+                            }
+                        }
+
+                        // 智能滚动：只有当用户本来就在底部附近时，才随新内容滚动
+                        const isAtBottom = chatContainer.scrollHeight - chatContainer.scrollTop - chatContainer.clientHeight < 100;
+                        if (isAtBottom) {
+                            chatContainer.scrollTop = chatContainer.scrollHeight;
+                        }
+
+                        if (completed) break;
+                    }
+                } catch (readError) {
+                    console.error("[Stream] Read error:", readError);
+                    completed = true;
+                }
+
+                clearTimeout(timeoutId);
+
+                // 最终处理
+                console.log("[Stream] Final processing, actualContent length:", actualContent.length);
+                if (actualContent.trim()) {
+                    aiMsgDiv.innerText = actualContent.trim();
+                    const lastItem = history[history.length - 1];
+                    if (!lastItem || lastItem.role === 'user') {
+                        history.push({ role: 'assistant', content: actualContent.trim() });
+                    }
+                }
+
+            } catch (err) {
+                console.error("Chat error:", err);
+                aiMsgDiv.innerText = '连接失败，请检查后端服务。错误: ' + err.message;
+            } finally {
+                console.log("[Frontend] Request completed, actualContent length:", actualContent.length);
+                hideTyping();
+                isProcessing = false;
+            }
+        }
+
+        function addMessage(text, role, smooth = true) {
+            const div = document.createElement('div');
+            div.className = `message ${role}-message`;
+            div.innerText = text;
+            chatContainer.appendChild(div);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+            return div;
+        }
+
+        async function clearSession() {
+            if (!confirm('确定要清空所有对话记录吗？')) return;
+
+            try {
+                // 清空云端session
+                await fetch('/session/clear', { method: 'DELETE' });
+
+                // 清空本地状态
+                history = [];
+                currentSummary = '';
+
+                // 清空界面
+                chatContainer.innerHTML = '<div class="message ai-message">对话已清空。我是你的第二大脑，随时可以开始新的对话。</div>';
+                memoryContent.innerText = "📝 [动态摘要]:\n尚无动态摘要";
+
+                console.log("[Session] 对话已清空（云端+本地）");
+            } catch (e) {
+                console.error("清空失败:", e);
+                alert('清空失败，请检查网络连接');
+            }
+        }
+
+        msgInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        // Debug Panel 功能
+        let debugPanelOpen = false;
+
+        document.getElementById('debug-toggle').addEventListener('click', () => {
+            debugPanelOpen = !debugPanelOpen;
+            const panel = document.getElementById('debug-panel');
+            panel.style.display = debugPanelOpen ? 'block' : 'none';
+
+            if (debugPanelOpen) {
+                loadDebugData();
+            }
+        });
+
+        document.getElementById('debug-close').addEventListener('click', () => {
+            debugPanelOpen = false;
+            document.getElementById('debug-panel').style.display = 'none';
+        });
+
+        async function loadDebugData() {
+            try {
+                // 加载系统状态
+                const statusResponse = await fetch('/debug/status');
+                const statusData = await statusResponse.json();
+                document.getElementById('debug-status').innerHTML = `
+                    <div>📅 当前逻辑日期: ${statusData.logical_date || 'N/A'}</div>
+                    <div>💬 对话记录数: ${statusData.session_count || 0}</div>
+                    <div>📝 M2摘要长度: ${statusData.summary_length || 0} 字符</div>
+                    <div style="color: var(--accent-color); font-weight: bold;">📏 总上下文长度: ${statusData.total_context_length || 0} (字符估算)</div>
+                    <div>🗃️ M3记忆文件: ${statusData.memory_count || 0} 个</div>
+                    <div>⏰ 系统时间: ${new Date().toLocaleString()}</div>
+                `;
+
+                // 加载M2摘要内容
+                document.getElementById('debug-m2-content').textContent = currentSummary || '暂无摘要内容';
+
+                // 加载M3记忆列表
+                const memoriesResponse = await fetch('/memory/list');
+                const memoriesData = await memoriesResponse.json();
+
+                // 处理API返回格式：可能是 {files: [...]} 或 {memories: [...]}
+                const memories = memoriesData.memories || memoriesData.files || [];
+
+                const memoriesHtml = memories.map(memory => {
+                    // 如果是字符串，转换为对象格式
+                    const memoryObj = typeof memory === 'string' ?
+                        { filename: memory, last_accessed: '未知', size: 0 } :
+                        memory;
+
+                    // 格式化文件大小
+                    const formatSize = (bytes) => {
+                        if (bytes === 0) return '空文件';
+                        if (bytes < 1024) return `${bytes} 字符`;
+                        if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)}K 字符`;
+                        return `${(bytes / (1024 * 1024)).toFixed(1)}M 字符`;
+                    };
+
+                    return `<div style="padding: 0.5rem; margin: 0.3rem 0; background: rgba(255,255,255,0.1); border-radius: 8px; cursor: pointer;" onclick="loadMemoryContent('${memoryObj.filename}')">
+                        📄 ${memoryObj.filename}
+                        <div style="font-size: 0.7rem; color: var(--text-secondary); margin-top: 0.2rem;">
+                            ${memoryObj.last_accessed || '未访问'} | ${formatSize(memoryObj.size || 0)}
+                        </div>
+                    </div>`;
+                }).join('');
+
+                document.getElementById('debug-memories').innerHTML = memoriesHtml || '<div style="color: var(--text-secondary);">暂无记忆文件</div>';
+
+            } catch (e) {
+                console.error('Failed to load debug data:', e);
+            }
+        }
+
+        async function loadMemoryContent(filename) {
+            try {
+                const response = await fetch('/memory/read', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ filename })
+                });
+                const data = await response.json();
+                document.getElementById('debug-memory-content').textContent = data.content || '无内容';
+            } catch (e) {
+                console.error('Failed to load memory content:', e);
+                document.getElementById('debug-memory-content').textContent = '加载失败';
+            }
+        }
+
+        // Debug按钮事件
+        document.getElementById('debug-archive').addEventListener('click', async () => {
+            const btn = document.getElementById('debug-archive');
+            const originalText = btn.innerText;
+            try {
+                btn.innerText = '⏳ 归档中...';
+                btn.disabled = true;
+
+                const response = await fetch('/debug/archive', { method: 'POST' });
+                const result = await response.json();
+
+                if (result.status === 'success') {
+                    // 1. 同步更新本地全局变量
+                    history = [];
+                    currentSummary = result.new_summary || '';
+
+                    // 2. 刷新主界面（不需要 reload）
+                    renderHistory();
+
+                    // 3. 构造详细反馈
+                    let patchMsg = "\n\nM3 记忆更新：\n";
+                    if (result.patch_results && result.patch_results.length > 0) {
+                        result.patch_results.forEach(p => {
+                            patchMsg += `✅ [${p.filename}]: ${p.success ? '更新成功' : '失败'}\n`;
+                        });
+                    } else {
+                        patchMsg += "ℹ️ 未检测到需要存入 M3 的长期记忆。";
+                    }
+
+                    alert(`${result.message}${patchMsg}`);
+
+                    // 4. 刷新调试面板数据
+                    loadDebugData();
+                } else {
+                    alert('归档异常: ' + (result.message || '未知错误'));
+                }
+            } catch (e) {
+                alert('归档失败: ' + e.message);
+            } finally {
+                btn.innerText = originalText;
+                btn.disabled = false;
+            }
+        });
+
+        document.getElementById('debug-clear').addEventListener('click', async () => {
+            if (!confirm('确定要清空所有对话记录吗？此操作不可恢复。')) return;
+
+            try {
+                const response = await fetch('/session/clear', { method: 'DELETE' });
+                if (response.ok) {
+                    history = [];
+                    currentSummary = '';
+                    await renderHistory();
+                    alert('对话记录已清空');
+                    loadDebugData(); // 刷新数据
+                }
+            } catch (e) {
+                alert('清空失败: ' + e.message);
+            }
+        });
+    </script>
+</body>
+
+</html>
