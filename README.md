@@ -54,8 +54,8 @@
 The fastest way to get Project Sphere running is via Docker.
 
 ```bash
-git clone https://github.com/2247407869/memory-v1.git
-cd memory-v1
+git clone https://github.com/2247407869/project-sphere.git
+cd project-sphere
 
 # Copy and configure environment variables
 cp .env.example .env
