@@ -6,7 +6,7 @@
 
 ---
 
-## Architecture: Triple Memory System
+## 🏗️ Architecture: Triple Memory System
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
@@ -15,7 +15,7 @@
 └──────────────────────────┬───────────────────────────────────┘
                            │
 ┌──────────────────────────▼───────────────────────────────────┐
-│                    FastAPI Core Server                        │
+│                    FastAPI Core Server                       │
 │   Function Calling Loop · Tool Dispatcher · Stream Router    │
 └──────┬───────────────────┬──────────────────────┬────────────┘
        │                   │                      │
@@ -29,111 +29,89 @@
 └──────────────┘  └───────────────────┘  └──────────────────┘
 ```
 
-### Memory Layers
+### Memory Layers Defined
 
 | Layer | Name | Description |
 |-------|------|-------------|
-| **M1** | Working Memory | In-request conversation context |
-| **M2** | Dynamic Summary | Reflective compression of past dialogues — simulating human sleep-phase memory consolidation |
-| **M3** | Long-Term Memory | Persistent, topic-sharded Markdown files stored on personal WebDAV cloud |
+| **M1** | Working Memory | In-request conversation context. Purely local to the current active session. |
+| **M2** | Dynamic Summary | Reflective compression of past dialogues. Unlike mechanical chunking, M2 simulates human sleep-phase memory consolidation—extracting daily insights, emotional tones, and actionable directives, producing synthesis rather than mere summarization. |
+| **M3** | Long-Term Memory | Persistent, auto-sharding Markdown files stored on a personal WebDAV cloud. The `MemoryPatcher` agent actively filters for high-entropy information (decision rationales, nuanced preferences, strategic goals) and organically creates new topic files as knowledge domains expand. |
 
 ---
 
-## Key Features
+## ✨ Key Features
 
-- **🔄 Automatic Daily Archive**: Each session is automatically consolidated into an M2 summary and key facts are extracted to M3 — no manual effort required
-- **🛠️ Function Calling Agent Loop**: Built-in memory tools (`fetch_memory`, `patch_memory`) called by the LLM to read/write long-term knowledge
-- **👁️ Multimodal Support**: Image analysis via Gemini Flash, text reasoning via DeepSeek V3
-- **☁️ Privacy-First Storage**: All long-term memory stored on user-controlled WebDAV (InfiniCloud), not third-party databases
-- **📱 Mobile-Ready UI**: Responsive frontend with streaming responses and session management
-- **🐳 Docker Ready**: Full containerized deployment with Docker Compose
-
----
-
-## Project Structure
-
-```
-project-sphere/
-├── main.py                 # FastAPI server, API routes, agent loop
-├── src/
-│   ├── agents/
-│   │   ├── dispatcher.py         # Tool call routing
-│   │   ├── memory_patcher.py     # M3 memory write agent
-│   │   ├── memory_tools.py       # M3 memory read tools
-│   │   ├── daily_archive.py      # M2 consolidation agent
-│   │   ├── knowledge_agent.py    # Knowledge retrieval
-│   │   └── thinking_tool_stream.py  # Streaming inference
-│   ├── storage/            # WebDAV sync manager
-│   └── utils/
-├── frontend/
-│   ├── index.html          # Main chat interface
-│   └── debug.html          # Memory debug panel
-├── Dockerfile
-├── docker-compose.yml
-└── requirements.txt
-```
+- **🔄 Automatic Daily Context Integration**: Each session is automatically consolidated into an M2 summary, while key facts are extracted to M3 without any manual prompting.
+- **🛠️ Self-Driven Agent Loop**: Features a built-in tool dispatcher where the LLM can autonomously invoke `fetch_memory` and `patch_memory` to read and write to its long-term knowledge base mid-conversation.
+- **👁️ Multimodal Routing**: Automatically routes vision tasks (image analysis) to Gemini 3 Flash for optimal cost-performance, while delegating heavy text reasoning to DeepSeek V3.
+- **☁️ Data Sovereignty**: All long-term memories (M3) are stored as raw Markdown files on user-controlled WebDAV infrastructure (e.g., InfiniCloud). No vendor lock-in, no third-party vector databases.
+- **🐳 Docker Native**: Ships with a ready-to-use `docker-compose.yml` for instant isolated deployment.
 
 ---
 
-## Quick Start
+## 🚀 Quick Start (Docker)
 
-### Option 1: Docker (Recommended)
+The fastest way to get Project Sphere running is via Docker.
 
 ```bash
-git clone https://github.com/2247407869/project-sphere.git
-cd project-sphere
+git clone https://github.com/2247407869/memory-v1.git
+cd memory-v1
+
+# Copy and configure environment variables
 cp .env.example .env
-# Fill in your API keys in .env
-docker-compose up -d
 ```
 
-Open `http://localhost:8000` in your browser.
-
-### Option 2: Local Development
-
-```bash
-pip install -r requirements.txt
-cp .env.example .env
-# Fill in your API keys
-uvicorn main:app --reload --port 8000
-```
-
----
-
-## Configuration
-
-Copy `.env.example` to `.env` and fill in your credentials:
-
+Edit your `.env` file to include your API keys and WebDAV credentials:
 ```env
-# LLM
 DEEPSEEK_API_KEY=your_deepseek_api_key
-
-# Long-term memory storage (WebDAV)
 INFINICLOUD_URL=https://your-webdav-server.com/dav
 INFINICLOUD_USER=your_username
 INFINICLOUD_PASS=your_password
 ```
 
----
-
-## Design Motivation
-
-Most AI assistants reset with every conversation. Project Sphere is designed differently:
-
-- **M2 (Dynamic Summary)** uses a *reflective consolidation* model — rather than mechanically compressing text, it simulates how humans integrate and re-prioritize experiences during sleep, producing new insight each day
-- **M3 (Long-Term Memory)** supports *auto-sharding* — the system automatically creates new topic-specific files as knowledge domains expand, enabling organic growth of the knowledge base
-- The entire memory stack runs **locally or on user-owned infrastructure**, preserving data sovereignty
+Boot the ecosystem:
+```bash
+docker-compose up -d
+```
+Access the responsive web interface at `http://localhost:8000`.
 
 ---
 
-## Background
+## 📂 Project Structure
 
-This project grew from a personal frustration: every time I started a new chat session, the AI had forgotten everything. I wanted a system that genuinely *remembered* — not just context-window tricks, but structured, persistent, searchable memory.
-
-Built and iterated on through 2025-2026 as a personal infrastructure project.
+```text
+memory-v1/
+├── main.py                 # Core FastAPI server & Agent routing loop
+├── src/
+│   ├── agents/
+│   │   ├── dispatcher.py         # Autonomous tool routing
+│   │   ├── memory_patcher.py     # M3 write agent (Knowledge extraction)
+│   │   ├── memory_tools.py       # M3 read agent (Retrieval)
+│   │   ├── daily_archive.py      # M2 consolidation agent
+│   │   └── thinking_tool_stream.py # Streaming response handler
+│   ├── storage/            # WebDAV synchronization manager
+│   └── utils/
+├── frontend/
+│   ├── index.html          # Vanilla JS/HTML mobile-ready chat UI
+│   └── debug.html          # Introspection panel for checking M1/M2/M3 states
+├── Dockerfile
+└── docker-compose.yml
+```
 
 ---
 
-## License
+## 💡 The "State Hydration" Problem
 
-MIT
+This architecture was specifically engineered to solve the **"State Hydration Penalty"** inherent in serverless AI agents. Constantly retrieving massive, unstructured conversation logs from cold storage introduces unbearable latency.
+
+By decoupling memory into M1/M2/M3:
+1. **M1** is kept instantly available in local memory.
+2. **M2** acts as a highly compressed, predictive prefetch cache.
+3. **M3** is lazy-loaded via explicit tool calls only when the agent realizes it needs deep historical context.
+
+*(This exact architecture serves as the experimental blueprint for my ongoing research into predictive state prefetching for resource-constrained clusters.)*
+
+---
+
+## 📄 License
+MIT License
